@@ -29,23 +29,28 @@ def run_evaluation_pipeline(
     Args:
         n_entries: Number of eval entries to generate (default 100).
         use_fresh_data: If True, generates fresh eval set from yfinance.
-            If False, would read from Journal ledger (future extension).
+            If False, reads from Journal ledger instead.
         rag_corpus: Optional RAGCorpus instance to use when generating eval data.
 
     Returns:
         Metrics dict with hit_rate, avg_r_multiple, calibration, intraday/swing breakdown.
     """
     print(f"=== ATLAS Evaluation Pipeline ===")
-    print(f"Generating {n_entries} eval entries...")
+    print(f"Generating eval entries...")
 
     # Step 1: Generate eval set (or read from ledger if use_fresh_data=False)
     if use_fresh_data:
+        from atlas.eval_set import generate_eval_set
         eval_entries = generate_eval_set(n=n_entries)
         print(f"  Generated {len(eval_entries)} eval entries from yfinance historical data")
     else:
-        # TODO: Read from Journal ledger when Journal integration is complete
-        print("  [INFO] use_fresh_data=False: would read from Journal ledger")
-        eval_entries = generate_eval_set(n=n_entries)
+        # Read from Journal ledger
+        from atlas.journal import read_all_regime_entries
+        eval_entries = read_all_regime_entries()
+        print(f"  Read {len(eval_entries)} eval entries from Journal ledger")
+        if not eval_entries:
+            print("  [WARNING] No journal entries found. Generating fresh eval set instead.")
+            eval_entries = generate_eval_set(n=n_entries)
 
     # Step 2: Compute metrics
     print("Computing metrics...")

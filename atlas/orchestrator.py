@@ -24,7 +24,7 @@ from atlas.risk_verdict import RiskVerdict, verify
 from atlas.research_ai import ResearchAI, ConfigDrivenResearchAI
 from atlas.rag_corpus import RAGCorpus
 from atlas.state_snapshot import StateSnapshot, compute_from_bars
-from atlas.brokers.kite_adapter import KiteAdapter
+from atlas.brokers.kite_adapter import KiteAdapter, RateLimitError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -49,6 +49,9 @@ class OrchestratorConfig:
         max_weekly_loss: float = 5000.0,
         allowed_symbols: Optional[list] = None,
         min_reward_to_risk: float = 2.0,
+        max_api_calls_per_cycle: int = 10,
+        rate_limit_backoff_factor: float = 2.0,
+        rate_limit_max_retries: int = 3,
     ) -> None:
         """Initialize orchestrator configuration.
 
@@ -63,6 +66,9 @@ class OrchestratorConfig:
             max_weekly_loss: Maximum weekly loss limit in currency units.
             allowed_symbols: List of allowed trading symbols (e.g., ["BTC-USD", "ETH-USD"]).
             min_reward_to_risk: Alias for min_rd (reward-to-risk ratio).
+            max_api_calls_per_cycle: Max API calls per cycle before backoff (default 10).
+            rate_limit_backoff_factor: Exponential backoff factor (default 2.0).
+            rate_limit_max_retries: Max retry attempts on 429 (default 3).
         """
         self.min_confidence = min_confidence
         self.min_rr = min_rr
@@ -74,6 +80,9 @@ class OrchestratorConfig:
         self.max_weekly_loss = max_weekly_loss
         self.allowed_symbols = allowed_symbols or []
         self.min_reward_to_risk = min_reward_to_risk
+        self.max_api_calls_per_cycle = max_api_calls_per_cycle
+        self.rate_limit_backoff_factor = rate_limit_backoff_factor
+        self.rate_limit_max_retries = rate_limit_max_retries
 
     def to_context_dict(self) -> Dict[str, Any]:
         """Convert config to a context dict for risk verification.
@@ -193,6 +202,10 @@ class Orchestrator:
             "step7_error": None,
         }
 
+        # Rate limit tracking per cycle
+        api_call_count = 0
+        max_api_calls = self.config.max_api_calls_per_cycle
+
         try:
             # =========================================================================
             # Step 1: Compute StateSnapshot from market_data
@@ -302,22 +315,17 @@ class Orchestrator:
                         "checks": risk_verdict.checks,
                     },
                 }
-                self.journal.append(result["step6_journal_entry"])
-                result["step6_journal_entry"] = {
-                    "step": "risk_rejection",
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "veto_reason": risk_verdict.veto_reason,
-                    "decision_proposal": {
-                        "action": decision_proposal.action,
-                        "confidence": decision_proposal.confidence,
-                        "size_hint": decision_proposal.size_hint,
-                    },
-                    "risk_verdict": {
-                        "approved": risk_verdict.approved,
-                        "veto_reason": risk_verdict.veto_reason,
-                        "checks": risk_verdict.checks,
-                    },
-                }
+                journal_entry = self._create_journal_entry(
+                    snapshot=snapshot,
+                    decision_proposal=decision_proposal,
+                    risk_verdict=risk_verdict,
+                    order_details={},
+                    regime_flags=regime_flags,
+                    event_alerts=event_alerts,
+                    step="risk_rejection",
+                )
+                self.journal.append(journal_entry)
+                result["step6_journal_entry"] = journal_entry
                 result["step7_success"] = True
                 result["step7_error"] = None
                 return result
@@ -582,25 +590,57 @@ class Orchestrator:
         except Exception as e:
             logger.warning(f"Symbol validation warning: {str(e)}")
 
-        # Place the order via KiteAdapter
-        try:
-            order_result = self.kite_adapter.place_order(
-                symbol=snapshot.symbol,
-                action=proposal_action,
-                quantity=quantity,
-                price=current_price,
-            )
-            logger.info(f"Order placed successfully: {order_result}")
-            return {
-                "order_id": order_result.get("order_id", "N/A"),
-                "quantity": quantity,
-                "price": current_price,
-                "stop_price": stop_price,
-                "action": proposal_action,
-            }
-        except Exception as e:
-            logger.error(f"Order placement failed: {str(e)}")
-            raise
+        # Place the order via KiteAdapter with rate limit protection
+        max_retries = self.config.rate_limit_max_retries
+        backoff_factor = self.config.rate_limit_backoff_factor
+        retry_count = 0
+
+        while retry_count <= max_retries:
+            api_call_count += 1
+            if api_call_count > self.config.max_api_calls_per_cycle:
+                wait_time = backoff_factor ** retry_count
+                logger.warning(
+                    f"API call limit reached ({api_call_count}/{self.config.max_api_calls_per_cycle}). "
+                    f"Backing off for {wait_time}s (retry {retry_count}/{max_retries})"
+                )
+                time.sleep(wait_time)
+                api_call_count = 0  # reset after backoff
+
+            try:
+                order_result = self.kite_adapter.place_order(
+                    symbol=snapshot.symbol,
+                    action=proposal_action,
+                    quantity=quantity,
+                    price=current_price,
+                )
+                logger.info(f"Order placed successfully: {order_result}")
+                return {
+                    "order_id": order_result.get("order_id", "N/A"),
+                    "quantity": quantity,
+                    "price": current_price,
+                    "stop_price": stop_price,
+                    "action": proposal_action,
+                }
+            except RateLimitError:
+                retry_count += 1
+                if retry_count > max_retries:
+                    logger.error(
+                        f"Max retries ({max_retries}) exceeded for rate limit handling"
+                    )
+                    raise
+                wait_time = backoff_factor ** retry_count
+                logger.info(
+                    f"Rate limit hit. Waiting {wait_time}s before retry {retry_count}/{max_retries}"
+                )
+                time.sleep(wait_time)
+            except Exception as e:
+                logger.error(f"Order placement failed: {str(e)}")
+                raise
+
+        # Should not reach here, but just in case
+        raise RateLimitError(
+            f"Max retries ({max_retries}) exceeded for rate limit handling"
+        )
 
     def _create_journal_entry(
         self,
@@ -610,6 +650,7 @@ class Orchestrator:
         order_details: Dict[str, Any],
         regime_flags: list[str],
         event_alerts: list[str],
+        step: str = "approved_trade",
     ) -> Dict[str, Any]:
         """Create a journal entry for the completed cycle.
 
@@ -623,6 +664,7 @@ class Orchestrator:
             order_details: The order placement details.
             regime_flags: Regime flags from Research AI.
             event_alerts: Event alerts from Research AI.
+            step: Cycle step identifier - "approved_trade", "risk_rejection", or "execution_failure".
 
         Returns:
             Dict representing the journal entry.
@@ -632,6 +674,7 @@ class Orchestrator:
             "snapshot_id": snapshot.snapshot_id,
             "symbol": snapshot.symbol,
             "timeframe": snapshot.timeframe,
+            "step": step,
             "decision_proposal": {
                 "action": decision_proposal.action,
                 "confidence": decision_proposal.confidence,
