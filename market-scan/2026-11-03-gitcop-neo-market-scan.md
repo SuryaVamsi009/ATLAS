@@ -1,5 +1,5 @@
 # Daily Market Scan — 2026-11-03
-**Prepared:** 03-Nov-2026 04:53 IST | **Data as of:** 02-Nov-2026 close (T-1)  
+**Prepared:** 03-Nov-2026 04:56 IST | **Data as of:** 02-Nov-2026 close (T-1)  
 **Analyst:** Goldmen Intern — Senior Indian Equity Research  
 **Sources:** NSE India, Moneycontrol, Economic Times, LiveMint, Yahoo Finance, Reuters (cited inline)
 
