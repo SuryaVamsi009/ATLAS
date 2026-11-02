@@ -1,0 +1,52 @@
+name: Daily Market Scan (9 AM IST)
+
+on:
+  schedule:
+    # 9:00 AM IST = 3:30 AM UTC
+    - cron: '30 3 * * 1-5'  # Mon-Fri only
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  market-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml python-dateutil pytz
+
+      - name: Run market scan
+        id: scan
+        run: |
+          python scripts/daily_market_scan.py
+
+      - name: Commit and push report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add market-scan/
+            git commit -m "chore: daily market scan $(date +%F) [skip ci]"
+            git push
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
