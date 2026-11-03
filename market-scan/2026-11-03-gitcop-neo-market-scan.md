@@ -1,5 +1,5 @@
 # Daily Market Scan — 2026-11-03
-**Prepared:** 03-Nov-2026 04:56 IST | **Data as of:** 02-Nov-2026 close (T-1)  
+**Prepared:** 03-Nov-2026 16:42 IST | **Data as of:** 02-Nov-2026 close (T-1)  
 **Analyst:** Goldmen Intern — Senior Indian Equity Research  
 **Sources:** NSE India, Moneycontrol, Economic Times, LiveMint, Yahoo Finance, Reuters (cited inline)
 
@@ -7,7 +7,7 @@
 
 ## ⚡ REGIME SUMMARY (2–3 lines)
 
-Nifty 50 staged its **largest single-day gain in ~5 months (++1.68%)**, closing at 23,440.80 above the 50-day EMA with a long bullish candle and unfilled gap — confirming a short-term trend reversal. Bank Nifty (++0.58%) lags, holding barely above its 20-day EMA (54,971) but still below 50/200-day EMAs, signalling selective financials participation. India VIX at 15.50 (elevated) and FII buying (₹3,115 Cr cash) provide tailwinds, but US tech weakness (Nasdaq -1.07%) and sticky 10Y yields (4.8940%) cap upside. **Bias: Buy-on-dips; 23,500–23,600 resistance cluster, 23,200 immediate support.**
+Nifty 50 staged its **largest single-day gain in ~5 months (++1.58%)**, closing at 23,810.85 above the 50-day EMA with a long bullish candle and unfilled gap — confirming a short-term trend reversal. Bank Nifty (++0.98%) lags, holding barely above its 20-day EMA (54,971) but still below 50/200-day EMAs, signalling selective financials participation. India VIX at 15.50 (elevated) and FII buying (₹3,115 Cr cash) provide tailwinds, but US tech weakness (Nasdaq -1.07%) and sticky 10Y yields (4.8940%) cap upside. **Bias: Buy-on-dips; 23,500–23,600 resistance cluster, 23,200 immediate support.**
 
 ---
 
@@ -15,15 +15,15 @@ Nifty 50 staged its **largest single-day gain in ~5 months (++1.68%)**, closing 
 
 | Metric | Value | Change | Signal |
 |--------|-------|--------|--------|
-| **Nifty 50** | 23,440.80 | +1.68% | 🟢 Above 50-day EMA; bullish breakout |
-| **Bank Nifty** | 55,002.20 | +0.58% | 🟡 Above 20-day EMA only; weak structure |
+| **Nifty 50** | 23,810.85 | +1.58% | 🟢 Above 50-day EMA; bullish breakout |
+| **Bank Nifty** | 55,540.05 | +0.98% | 🟡 Above 20-day EMA only; weak structure |
 | **Nifty IT** | 32,442.50 | -0.50% | 🔴 Lagging; Infosys drag |
 | **Nifty Auto** | 25,761.00 | +1.33% | 🟢 Strong sales momentum |
 | **India VIX** | 15.50 | +1.29% | 🟡 Elevated; >13 = caution |
 | **FII Cash (Net)** | +₹3,114.68 Cr | 02-Nov | 🟢 Strong buying |
 | **DII Cash (Net)** | ₹-392.20 Cr | 02-Nov | 🟡 Mild selling |
 | **FII Equity (Net)** | +₹4,457.80 Cr | 01-Nov | 🟢 Heavy buying |
-| **USD/INR** | 94.8900 | -0.05% | 🟢 Rupee stable |
+| **USD/INR** | 94.7400 | -0.16% | 🟢 Rupee stable |
 | **Brent Crude** | $106.65 | -6.0% | 🟢 Positive for India |
 | **US 10Y Yield** | 4.8940% | -0.71% | 🟢 Easing |
 | **S&P 500** | 7,541.40 | -0.51% | 🔴 Weak |
@@ -83,7 +83,7 @@ Nifty 50 staged its **largest single-day gain in ~5 months (++1.68%)**, closing 
 
 ## 📚 FULL SOURCE LIST (with dates)
 
-1. **Moneycontrol — Markets Homepage** (02-Nov-2026) — Nifty 23440.80, Bank Nifty 55002.20, FII/DII cash flows, top gainers/losers, long build-up list  
+1. **Moneycontrol — Markets Homepage** (02-Nov-2026) — Nifty 23810.85, Bank Nifty 55540.05, FII/DII cash flows, top gainers/losers, long build-up list  
    `https://www.moneycontrol.com/markets/`
 
 2. **Moneycontrol — Technical View: Nifty stages strong bullish breakout** (02-Nov-2026) — Resistance 23,500–23,600, support 23,200, VIX 15.50, RSI 61, MACD bullish crossover  
@@ -116,13 +116,13 @@ Nifty 50 staged its **largest single-day gain in ~5 months (++1.68%)**, closing 
 11. **Moneycontrol — Nifty IT Components & Contribution** (02-Nov-2026) — Coforge +2.6% (Very Bullish), HCL Tech +0.4% (Very Bullish), Infosys -2.0% (Very Bullish but dragging), TCS flat  
     `https://www.moneycontrol.com/indian-indices/nifty-it-19.html`
 
-12. **Yahoo Finance — ^NSEI (Nifty 50)** (02-Nov-2026 close) — 23440.80 (+1.68%), day range 23,207–23,441, 52W 22,180–26,373  
+12. **Yahoo Finance — ^NSEI (Nifty 50)** (02-Nov-2026 close) — 23810.85 (+1.58%), day range 23,207–23,441, 52W 22,180–26,373  
     `https://finance.yahoo.com/quote/%5ENSEI/`
 
-13. **Yahoo Finance — ^NSEBANK (Bank Nifty)** (02-Nov-2026 close) — 55002.20 (+0.58%), day range 54,582–55,046, 52W 49,955–61,765  
+13. **Yahoo Finance — ^NSEBANK (Bank Nifty)** (02-Nov-2026 close) — 55540.05 (+0.98%), day range 54,582–55,046, 52W 49,955–61,765  
     `https://finance.yahoo.com/quote/%5ENSEBANK/`
 
-14. **Yahoo Finance — USDINR=X** (02-Nov-2026) — 94.8900 (-0.05%), day range 94.69–95.04, 52W 85.86–97.05  
+14. **Yahoo Finance — USDINR=X** (02-Nov-2026) — 94.7400 (-0.16%), day range 94.69–95.04, 52W 85.86–97.05  
     `https://finance.yahoo.com/quote/USDINR=X/`
 
 15. **Yahoo Finance — ^GSPC (S&P 500)** (02-Nov-2026 close) — 7541.40 (-0.51%), day range 7,539–7,662  
