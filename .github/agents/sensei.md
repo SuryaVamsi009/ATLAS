@@ -54,6 +54,13 @@ python sensai.py tune NAME [--iters 4] [--min-gain 0.2] [--target 9.0]
 - Worktree management for ATLAS modules
 - Cross-session communication
 
+### 6. Agent Registry & Discovery
+- **Pacman** (`.github/agents/pacman.md`) — Unified Platform Engineer for repo integration + feature engineering
+- **Goldmen Intern** (`.github/agents/goldmen_intern.md`) — Daily market scan generator
+- **Director** (`.github/agents/director.md`) — Market intelligence reviewer & mentor
+- **Jira Agent** (`.github/agents/jira_agent.md`) — Jira issue management
+- **Notion Agent** (`.github/agents/notion_agent.md`) — Notion page/database management
+
 ## Key Functions (via functions.py module)
 
 | Function | Description |
