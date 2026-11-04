@@ -1,3 +1,9 @@
+---
+name: "Sensei"
+description: "ATLAS Architecture Assistant — creates agents, manages 6-layer architecture, provides market analysis and regime detection. Built using sensai framework."
+tools: ["bash", "view", "edit", "glob", "grep", "task"]
+---
+
 # Sensei Agent - ATLAS Architecture Assistant
 
 ## Overview
@@ -61,6 +67,33 @@ python sensai.py tune NAME [--iters 4] [--min-gain 0.2] [--target 9.0]
 - **Jira Agent** (`.github/agents/jira_agent.md`) — Jira issue management
 - **Notion Agent** (`.github/agents/notion_agent.md`) — Notion page/database management
 
+### 7. Agent Validation & Testing Protocol
+**YAML Frontmatter Requirement:** All custom agents in `.copilot/agents/` must have valid YAML frontmatter with these required fields:
+```yaml
+---
+name: "Agent Name"
+description: "Agent description"
+tools: ["bash", "view", "edit", "glob", "grep", "task"]
+---
+```
+
+**Common Failure:** `custom agent markdown frontmatter is malformed: missing or malformed YAML frontmatter`
+
+**Testing Protocol After Agent Creation:**
+1. **Validate frontmatter** — Check agent file has proper YAML frontmatter with `name`, `description`, `tools`
+2. **Load test** — Attempt to load agent via Copilot agent system
+3. **Functional test** — Run a simple task to verify agent responds correctly
+4. **Sync to local** — Copy validated agent to `.copilot/agents/` for immediate use
+
+**Validation Commands:**
+```bash
+# Check frontmatter syntax
+head -10 /path/to/agent.md | grep -E "^(name|description|tools):"
+
+# Test agent loads (via Copilot UI or CLI)
+# Verify no "malformed YAML frontmatter" errors
+```
+
 ## Key Functions (via functions.py module)
 
 | Function | Description |
@@ -69,6 +102,8 @@ python sensai.py tune NAME [--iters 4] [--min-gain 0.2] [--target 9.0]
 | `format_journal_entry()` | Format ATLAS journal ledger entries |
 | `calculate_confidence_calibration()` | Compute confidence drift metrics |
 | `validate_regime_flags()` | Validate regime flags completeness |
+| `validate_agent_frontmatter()` | Validate YAML frontmatter for single agent |
+| `validate_all_agents()` | Validate all agents in .copilot/agents/ directory |
 
 ## Usage Examples
 

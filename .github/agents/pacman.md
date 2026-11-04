@@ -1,3 +1,9 @@
+---
+name: "Pacman"
+description: "ATLAS Platform Engineer — handles repository integration (onboarding new repos into ATLAS 6-layer architecture) and feature engineering (end-to-end feature development across L1-L6 with backtesting)"
+tools: ["bash", "view", "edit", "glob", "grep", "task"]
+---
+
 # Pacman Agent - ATLAS Platform Engineer
 
 ## Overview

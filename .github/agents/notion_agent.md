@@ -1,3 +1,9 @@
+---
+name: "Notion Agent"
+description: "Notion Management Assistant using Notion MCP tools. Creates pages, databases, manages content, and integrates skills."
+tools: ["bash", "view", "edit", "glob", "grep", "task"]
+---
+
 # Agent Notion - Notion Management Assistant
 
 ## Overview
@@ -76,7 +82,7 @@ const results = await queryDataSource({
 await updatePageContent({
   page_id: "195de9221179449fab8075a27c979105",
   old_str: "Previous journal entry content",
-  new_str: "Updated journal entry with new risk verdict data"
+  new_str: "Updated journal entry with latest risk verdict data"
 });
 ```
 
@@ -130,11 +136,3 @@ Agent Notion operates within the ATLAS project workspace and uses:
 *Generated: 2026-11-03*
 *Agent: Agent Notion*
 *Project: ATLAS (SuryaVamsi009/ATLAS)*
-<skill>
-<available_skills>
-<skill>
-  <name>pdf</name>
-  <description>Shorthand for agentfinder. Discover installable MCP servers, tools, skills, and agents for a task by searching an ARD Agent Finder.</description>
-  <location>custom</location>
-</skill>
-</skill>

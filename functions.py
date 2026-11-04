@@ -3,6 +3,7 @@
 
 import json
 import os
+import yaml
 from datetime import datetime
 from pathlib import Path
 
@@ -132,3 +133,88 @@ def validate_regime_flags(regime_flags: dict) -> dict:
         'all_flags_present': len(missing_keys) == 0,
         'regime_flags': regime_flags
     }
+
+
+def validate_agent_frontmatter(agent_path: str) -> dict:
+    """
+    Validate YAML frontmatter in an agent markdown file.
+    
+    Args:
+        agent_path: Path to agent markdown file
+        
+    Returns:
+        Validation result dictionary
+    """
+    required_fields = ["name", "description", "tools"]
+    
+    try:
+        with open(agent_path, 'r') as f:
+            content = f.read()
+        
+        if not content.startswith('---'):
+            return {'valid': False, 'error': 'Missing frontmatter delimiter (---)'}
+        
+        parts = content.split('---', 2)
+        if len(parts) < 3:
+            return {'valid': False, 'error': 'Incomplete frontmatter'}
+        
+        frontmatter_str = parts[1].strip()
+        frontmatter = yaml.safe_load(frontmatter_str)
+        
+        if not isinstance(frontmatter, dict):
+            return {'valid': False, 'error': 'Frontmatter is not a valid YAML object'}
+        
+        missing = [field for field in required_fields if field not in frontmatter]
+        if missing:
+            return {'valid': False, 'error': f'Missing required fields: {missing}'}
+        
+        if not isinstance(frontmatter.get("tools"), list):
+            return {'valid': False, 'error': 'tools must be a list'}
+        
+        return {
+            'valid': True,
+            'name': frontmatter.get('name'),
+            'description': frontmatter.get('description'),
+            'tools': frontmatter.get('tools')
+        }
+    
+    except yaml.YAMLError as e:
+        return {'valid': False, 'error': f'YAML parse error: {e}'}
+    except Exception as e:
+        return {'valid': False, 'error': f'Error: {e}'}
+
+
+def validate_all_agents(agents_dir: str = None) -> dict:
+    """
+    Validate all agent files in the agents directory.
+    
+    Args:
+        agents_dir: Path to agents directory (default: .copilot/agents)
+        
+    Returns:
+        Validation summary dictionary
+    """
+    if agents_dir is None:
+        agents_dir = "/Users/suryavamsipichika/.copilot/agents"
+    
+    agents_path = Path(agents_dir)
+    agent_files = list(agents_path.glob("*.md"))
+    
+    results = {
+        'total': len(agent_files),
+        'valid': 0,
+        'invalid': 0,
+        'details': []
+    }
+    
+    for agent_file in sorted(agent_files):
+        result = validate_agent_frontmatter(str(agent_file))
+        result['file'] = agent_file.name
+        results['details'].append(result)
+        if result['valid']:
+            results['valid'] += 1
+        else:
+            results['invalid'] += 1
+    
+    results['all_valid'] = results['invalid'] == 0
+    return results

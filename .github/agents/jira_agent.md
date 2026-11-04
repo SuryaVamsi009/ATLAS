@@ -1,6 +1,10 @@
-# Agent Jira - Jira Management Assistant
+---
+name: "Jira Agent"
+description: "Jira Management Assistant using Atlassian MCP tools. Creates, searches, edits, transitions issues, and manages comments."
+tools: ["bash", "view", "edit", "glob", "grep", "task"]
+---
 
-## Overview
+# Agent Jira - Jira Management Assistant
 Agent Jira is a Jira management assistant built using the Atlassian MCP tools. It can perform various Jira operations including issue creation, search, editing, transitions, and comment management.
 
 ## Session Information
@@ -45,42 +49,35 @@ Agent Jira is a Jira management assistant built using the Atlassian MCP tools. I
 
 ### Create a Task
 ```javascript
-// Create a new task in project KAN
 const result = await createJiraIssue({
   summary: "Repair and connect notion",
   projectKey: "KAN",
   issueType: "Task",
   additional_fields: {
-    description: "nvidia/nemotron-3.5-lightining-30b-a3b . Nvidia NIM"
+    description: "Nvidia NIM integration"
   }
 });
-// Result: KAN-4 created
 ```
 
 ### Search Issues
 ```javascript
-// Search for all open issues in KAN project
 const results = await searchJiraIssuesUsingJql({
   jql: "project = KAN AND status = Open",
   view: "evidence",
   maxResults: 50
 });
-// Returns list of issues
 ```
 
 ### Transition an Issue
 ```javascript
-// Move issue KAN-6 to In Progress
 const result = await transitionJiraIssue({
-  issueIdOrKey: "KAN-6",
+  issueIdOrKey: "KAN-4",
   transitionName: "To In Progress"
 });
-// Issue status updated
 ```
 
 ### Add a Comment
 ```javascript
-// Add comment to issue KAN-6
 await addOrEditJiraIssueComment({
   issueIdOrKey: "KAN-6",
   commentBody: "Starting work on this task - will investigate the notion integration"
@@ -95,7 +92,7 @@ await addOrEditJiraIssueComment({
 - **SQL tracking:** Use `session_store_sql` to record configurations
 
 ### Repository Backup
-- This markdown file is stored in: `/Users/suryavamsipichika/Documents/GitHub/ATLAS/agents/jira_agent.md`
+- Authoritative file: `.github/agents/jira_agent.md`
 - Keep updated with any capability changes
 - Version control recommended
 
@@ -106,24 +103,9 @@ await addOrEditJiraIssueComment({
 
 ## Getting Started
 
-1. **Interact with Agent Jira** by sending prompts like:
-   - "Create a task to fix login bug in project KAN"
-   - "Search for all open issues in project KAN with priority High"
-   - "Transition issue KAN-4 to In Progress status"
-   - "Add a comment to issue KAN-6: Starting work"
-
-2. **Agent Jira will execute** using the Atlassian MCP tools automatically
-
-3. **Review results** and continue with additional prompts as needed
+1. Interact with Agent Jira by describing the Jira task.
+2. Agent Jira uses the Atlassian MCP tools when available.
+3. Review results and continue or close the session.
 
 ## Configuration
-
-Agent Jira operates within the ATLAS project workspace and uses:
-- **MCP Server:** `cc-_1kgu7WrDe1UQjIe` (Atlassian)
-- **Project:** KAN (and other projects as specified)
-- **Session Mode:** Interactive (plan approved)
-
----
-*Generated: 2026-11-01*
-*Agent: Agent Jira*
-*Project: ATLAS (SuryaVamsi009/ATLAS)*
+Agent Jira operates within the ATLAS project workspace and uses the Atlassian MCP server (`cc-_1kgu7WrDe1UQjIe`).
