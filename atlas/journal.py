@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
@@ -350,12 +350,15 @@ def get_ledger_entries(
 
         # Apply time filter
         if filter_start or filter_end:
-            ts_str = entry.get("timestamp", "")
+            ts_str = entry.get("timestamp_ist") or entry.get("timestamp", "")
             try:
                 entry_dt = datetime.fromisoformat(ts_str)
-                if filter_start and entry_dt < filter_start:
+                entry_utc = _as_utc(entry_dt)
+                start_utc = _as_utc(filter_start) if filter_start else None
+                end_utc = _as_utc(filter_end) if filter_end else None
+                if start_utc and entry_utc < start_utc:
                     continue
-                if filter_end and entry_dt > filter_end:
+                if end_utc and entry_utc > end_utc:
                     continue
             except (ValueError, TypeError):
                 pass  # Include entries with unparseable timestamps
@@ -363,6 +366,12 @@ def get_ledger_entries(
         entries.append(entry)
 
     return entries
+
+
+def _as_utc(timestamp: datetime) -> datetime:
+    if timestamp.tzinfo is None:
+        return timestamp.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(timezone.utc)
 
 
 def get_ledger_stats() -> Dict[str, Any]:

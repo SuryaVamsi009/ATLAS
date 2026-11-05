@@ -191,7 +191,7 @@ class Orchestrator:
             for prefix, stage in (
                 ("Step 1 failed:", "snapshot"),
                 ("Step 2 failed:", "research"),
-                ("Step 3 failed:", "decision"),
+                ("Step 3 failed:", "proposal"),
                 ("Step 4 failed:", "risk"),
                 ("Step 5 failed:", "execution"),
                 ("Step 6 failed:", "journal"),
@@ -215,7 +215,7 @@ class Orchestrator:
                 snapshot=snapshot,
                 decision_proposal=decision_proposal,
                 risk_verdict=risk_verdict,
-                order_details=result["step5_order_details"] or {},
+                order_result=result["step5_order_details"],
                 regime_flags=result["step2_regime_flags"],
                 event_alerts=result["step2_event_alerts"],
                 step=step,
@@ -687,7 +687,7 @@ class Orchestrator:
         snapshot: Optional[StateSnapshot] = None,
         decision_proposal: Optional[DecisionProposal] = None,
         risk_verdict: Optional[RiskVerdict] = None,
-        order_details: Optional[Dict[str, Any]] = None,
+        order_result: Optional[Dict[str, Any]] = None,
         regime_flags: Optional[list[str]] = None,
         event_alerts: Optional[list[str]] = None,
         step: str = "approved_trade",
@@ -704,7 +704,7 @@ class Orchestrator:
             snapshot: The StateSnapshot at the time of the cycle.
             decision_proposal: The DecisionProposal that was generated.
             risk_verdict: The RiskVerdict from risk checks.
-            order_details: The order placement details.
+            order_result: The available order placement result.
             regime_flags: Regime flags from Research AI.
             event_alerts: Event alerts from Research AI.
             step: Cycle step identifier - "approved_trade", "risk_rejection", or "execution_failure".
@@ -712,8 +712,10 @@ class Orchestrator:
         Returns:
             Dict representing the journal entry.
         """
+        timestamp_ist = datetime.now(IST).isoformat()
         entry: Dict[str, Any] = {
-            "timestamp": datetime.now(IST).isoformat(),
+            "timestamp_ist": timestamp_ist,
+            "timestamp": timestamp_ist,
             "snapshot_id": snapshot.snapshot_id if snapshot else None,
             "symbol": snapshot.symbol if snapshot else None,
             "timeframe": snapshot.timeframe if snapshot else None,
@@ -721,6 +723,7 @@ class Orchestrator:
             "status": status,
             "error": error,
             "failure_stage": failure_stage,
+            "thesis": decision_proposal.rationale if decision_proposal else None,
             "decision_proposal": (
                 {
                     "action": decision_proposal.action,
@@ -745,7 +748,9 @@ class Orchestrator:
                 if risk_verdict
                 else None
             ),
-            "order_details": order_details or {},
+            "order_result": order_result,
+            "pnl": None,
+            "confidence_calibration": None,
             "regime_flags": regime_flags or [],
             "event_alerts": event_alerts or [],
             "config": {

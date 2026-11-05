@@ -1,7 +1,7 @@
 import json
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -112,10 +112,13 @@ class OrchestratorJournalTests(unittest.TestCase):
         self.assertEqual(second["step6_journal_entry"]["entry_id"], records[1]["entry_id"])
         self.assertEqual(records[0]["status"], "completed")
         self.assertEqual(records[0]["step"], "approved_trade")
-        self.assertEqual(
-            datetime.fromisoformat(records[0]["timestamp"]).utcoffset().total_seconds(),
-            19800,
-        )
+        self.assertEqual(records[0]["timestamp_ist"], records[0]["timestamp"])
+        self.assertEqual(datetime.fromisoformat(records[0]["timestamp_ist"]).utcoffset().total_seconds(), 19800)
+        self.assertIn("order_result", records[0])
+        self.assertNotIn("order_details", records[0])
+        self.assertEqual(records[0]["thesis"], records[0]["decision_proposal"]["rationale"])
+        self.assertIsNone(records[0]["pnl"])
+        self.assertIsNone(records[0]["confidence_calibration"])
         self.assertEqual(self.broker.order_attempts, 2)
         self.assertFalse(hasattr(orchestrator, "journal"))
 
@@ -162,7 +165,7 @@ class OrchestratorJournalTests(unittest.TestCase):
 
         record = self.read_entries()[0]
         self.assertFalse(result["step7_success"])
-        self.assertEqual(record["failure_stage"], "decision")
+        self.assertEqual(record["failure_stage"], "proposal")
         self.assertIn("proposal unavailable", record["error"])
 
     def test_risk_verification_failure_is_recorded(self):
@@ -204,6 +207,29 @@ class OrchestratorJournalTests(unittest.TestCase):
         self.assertEqual(result["step6_journal_entry"]["status"], "persistence_failed")
         self.assertEqual(self.broker.order_attempts, 1)
         self.assertFalse(self.ledger_file.exists())
+
+    def test_time_filter_handles_ist_offsets_and_legacy_naive_timestamps(self):
+        self.ledger_file.write_text(
+            "\n".join(
+                json.dumps(entry)
+                for entry in (
+                    {"timestamp_ist": "2026-11-06T10:30:00+05:30"},
+                    {"timestamp": "2026-11-06T05:30:00"},
+                    {"timestamp_ist": "2026-11-06T10:29:00+05:30"},
+                )
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        entries = journal.get_ledger_entries(
+            filter_start=datetime(2026, 11, 6, 5, 0, tzinfo=timezone.utc),
+            filter_end=datetime(2026, 11, 6, 6, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(entries[0]["timestamp_ist"], "2026-11-06T10:30:00+05:30")
+        self.assertEqual(entries[1]["timestamp"], "2026-11-06T05:30:00")
 
 
 if __name__ == "__main__":

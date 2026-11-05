@@ -488,12 +488,12 @@ def export_ledger_for_analysis(
 
         filtered_entries = []
         for entry in entries:
-            ts_str = entry.get("timestamp_ist", "")
+            ts_str = entry.get("timestamp_ist") or entry.get("timestamp", "")
             try:
-                entry_dt = datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%S")
-                if start_dt and entry_dt < start_dt:
+                entry_date = datetime.fromisoformat(ts_str).date()
+                if start_dt and entry_date < start_dt.date():
                     continue
-                if end_dt and entry_dt > end_dt:
+                if end_dt and entry_date > end_dt.date():
                     continue
             except (ValueError, TypeError):
                 pass
