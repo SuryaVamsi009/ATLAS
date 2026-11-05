@@ -13,7 +13,7 @@ Two-AI boundary enforcement:
 Ledger entry format (JSON-compatible, append-only):
 {
   "entry_id": str,           # Unique identifier
-  "timestamp_ist": str,      # IST timestamp
+  "timestamp": str,         # IST timestamp (timezone-aware ISO 8601)
   "snapshot_id": str,        # StateSnapshot identifier
   "regime_flags": [str],     # From Research AI
   "event_alerts": [str],     # From Research AI
@@ -32,9 +32,12 @@ import json
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 from atlas.decision_proposal import DecisionProposal
 from atlas.risk_verdict import RiskVerdict, VetoReason
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 # --- Ledger file path ---
@@ -53,6 +56,26 @@ def _append_entry(entry: Dict[str, Any]) -> None:
     _ensure_ledger_dir()
     with open(LEDGER_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def write_cycle_entry(entry: Dict[str, Any]) -> str:
+    """Persist one full orchestrator cycle (approved or risk-rejected) to the ledger.
+
+    Every cycle must be journalled, including risk-rejected ones, so the
+    JSONL ledger is the complete record of decisions.
+
+    Args:
+        entry: The journal entry dict produced by the orchestrator.
+
+    Returns:
+        entry_id of the written ledger entry.
+    """
+    entry_id = f"cycle_{entry.get('snapshot_id', 'unknown')}_{int(datetime.now(IST).timestamp())}"
+    record = dict(entry)
+    record["entry_id"] = entry_id
+    record.setdefault("timestamp", datetime.now(IST).isoformat())
+    _append_entry(record)
+    return entry_id
 
 
 # --- Research AI write: what Research AI produces ---
@@ -81,10 +104,10 @@ def write_regime_entry(
     Returns:
         entry_id of the written ledger entry
     """
-    entry_id = f"regime_{snapshot_id}_{int(datetime.utcnow().timestamp())}"
+    entry_id = f"regime_{snapshot_id}_{int(datetime.now(IST).timestamp())}"
     entry = {
         "entry_id": entry_id,
-        "timestamp_ist": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "timestamp": datetime.now(IST).isoformat(),
         "snapshot_id": snapshot_id,
         "regime_flags": regime_flags,
         "event_alerts": event_alerts,
@@ -174,7 +197,7 @@ def write_decision_proposal_entry(
 
     entry = {
         "entry_id": entry_id,
-        "timestamp_ist": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "timestamp": datetime.now(IST).isoformat(),
         "snapshot_id": snapshot_id,
         "regime_entry_id": regime_entry_id,
         "decision_proposal": proposal_dict,
@@ -212,7 +235,9 @@ def write_risk_verdict_entry(
                 "approved": risk_verdict.approved,
                 "final_qty": risk_verdict.final_qty,
                 "final_stop": risk_verdict.final_stop,
-                "veto_reason": risk_verdict.veto_reason.value if risk_verdict.veto_reason else None,
+                "veto_reason": risk_verdict.veto_reason.value
+                if risk_verdict.veto_reason is not VetoReason.NONE
+                else None,
                 "checks": risk_verdict.checks,
             }
             # Rewrite the file with updated entry
@@ -324,9 +349,9 @@ def get_ledger_entries(
 
         # Apply time filter
         if filter_start or filter_end:
-            ts_str = entry.get("timestamp_ist", "")
+            ts_str = entry.get("timestamp", "")
             try:
-                entry_dt = datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%S")
+                entry_dt = datetime.fromisoformat(ts_str)
                 if filter_start and entry_dt < filter_start:
                     continue
                 if filter_end and entry_dt > filter_end:

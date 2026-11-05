@@ -8,6 +8,10 @@ to enrich its analysis with historical context and proven patterns.
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from atlas.decision_proposal import DecisionProposal
 
 
 class RAGCorpus:
