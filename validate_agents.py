@@ -9,7 +9,7 @@ import os
 import sys
 from pathlib import Path
 
-AGENTS_DIR = Path("/Users/suryavamsipichika/.copilot/agents")
+AGENTS_DIR = Path(__file__).parent / ".github" / "agents"
 REQUIRED_FIELDS = ["name", "description", "tools"]
 
 def validate_frontmatter(filepath):

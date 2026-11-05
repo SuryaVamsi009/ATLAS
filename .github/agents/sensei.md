@@ -61,7 +61,9 @@ python sensai.py tune NAME [--iters 4] [--min-gain 0.2] [--target 9.0]
 - Cross-session communication
 
 ### 6. Agent Registry & Discovery
-- **Pacman** (`.github/agents/pacman.md`) — Unified Platform Engineer for repo integration + feature engineering
+- **Mergesmith** (`.github/agents/mergesmith.md`) — Unified Platform Engineer for repo integration + feature engineering
+- **Ben** (`.github/agents/ben.md`) — Bug Fix Specialist for diagnosing and fixing issues across L1-L6
+- **Pacman** (`.github/agents/pacman.md`) — Bug Finder for systematic codebase scanning and bug discovery
 - **Goldmen Intern** (`.github/agents/goldmen_intern.md`) — Daily market scan generator
 - **Director** (`.github/agents/director.md`) — Market intelligence reviewer & mentor
 - **Jira Agent** (`.github/agents/jira_agent.md`) — Jira issue management
