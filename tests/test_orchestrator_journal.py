@@ -205,6 +205,7 @@ class OrchestratorJournalTests(unittest.TestCase):
         self.assertIn("Journal persistence failed: disk full", result["step7_error"])
         self.assertEqual(result["step5_order_details"]["order_id"], "paper-1")
         self.assertEqual(result["step6_journal_entry"]["status"], "persistence_failed")
+        self.assertRegex(result["step6_journal_entry"]["entry_id"], r"^cycle_[0-9a-f]{32}$")
         self.assertEqual(self.broker.order_attempts, 1)
         self.assertFalse(self.ledger_file.exists())
 

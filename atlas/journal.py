@@ -72,8 +72,8 @@ def write_cycle_entry(entry: Dict[str, Any]) -> str:
         entry_id of the written ledger entry.
     """
     entry_id = f"cycle_{uuid4().hex}"
+    entry["entry_id"] = entry_id
     record = dict(entry)
-    record["entry_id"] = entry_id
     record.setdefault("timestamp", datetime.now(IST).isoformat())
     _append_entry(record)
     return entry_id
