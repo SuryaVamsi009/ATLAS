@@ -8,9 +8,13 @@ never supplies them.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,47 @@ class StateSnapshot:
     regime_features: dict[str, float]
     position: dict[str, Any]
     account: dict[str, Any]
+
+
+def _ema(values: list[float], period: int) -> float:
+    """Compute the exponential moving average over the full series."""
+    if not values:
+        return 0.0
+    if len(values) < period:
+        period = len(values)
+    multiplier = 2.0 / (period + 1)
+    ema = sum(values[:period]) / period
+    for price in values[period:]:
+        ema = (price - ema) * multiplier + ema
+    return ema
+
+
+def _wilder_rsi(closes: list[float], period: int = 14) -> float:
+    """Wilder's RSI over the latest `period` bars.
+
+    Returns 100 when average loss is 0 (all moves were gains).
+    """
+    if len(closes) < period + 1:
+        return 50.0  # neutral when insufficient data
+
+    window = closes[-(period + 1):]
+    gains = []
+    losses = []
+    for i in range(1, len(window)):
+        diff = window[i] - window[i - 1]
+        gains.append(max(diff, 0.0))
+        losses.append(max(-diff, 0.0))
+
+    avg_gain = sum(gains) / period
+    avg_loss = sum(losses) / period
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return 100.0 - (100.0 / (1.0 + rs))
 
 
 def compute_from_bars(symbol: str, timeframe: str, bars: list[list[float]]) -> StateSnapshot:
@@ -53,28 +98,25 @@ def compute_from_bars(symbol: str, timeframe: str, bars: list[list[float]]) -> S
 
     # Extract last N bars as plain floats (ohlcv_tail)
     # Each bar: [timestamp, open, high, low, close, volume]
-    ohlcv_tail = [float(bar[1]) for bar in bars[-2:]]  # last 2 close prices as example
+    ohlcv_tail = [float(bar[4]) for bar in bars[-2:]]  # last 2 close prices
 
     # Compute indicators from bars
-    # Example: RSI, ATR, EMA fast/slow, etc.
     closes = [float(bar[4]) for bar in bars]
     if len(closes) < 2:
         msg = "Need at least 2 closes to compute indicators"
         raise ValueError(msg)
 
-    # Simple example indicators - in practice these would use proper formulas
     last_close = closes[-1]
     prev_close = closes[-2]
 
     # Price change ratio as a simple indicator
     price_change = (last_close - prev_close) / prev_close if prev_close != 0 else 0.0
 
-    # EMA fast (short period) and EMA slow (long period) - simplified
-    # In production, use proper EMA calculation
-    ema_fast = last_close  # placeholder
-    ema_slow = last_close  # placeholder
+    # Real fast/slow EMAs over the close series
+    ema_fast = _ema(closes, 12)
+    ema_slow = _ema(closes, 26)
 
-    # Realised volatility (simplified std dev of returns)
+    # Realised volatility (std dev of returns)
     if len(closes) >= 3:
         returns = [(closes[i] / closes[i - 1]) - 1 for i in range(1, len(closes))]
         mean_return = sum(returns) / len(returns)
@@ -83,45 +125,37 @@ def compute_from_bars(symbol: str, timeframe: str, bars: list[list[float]]) -> S
     else:
         realised_vol = 0.0
 
-    # ATR (Average True Range) - simplified
+    # ATR (Average True Range) using the previous close for true range
     highs = [float(bar[2]) for bar in bars]
     lows = [float(bar[3]) for bar in bars]
     if len(highs) >= 2:
         tr_values = []
         for i in range(1, len(highs)):
+            prev_c = closes[i - 1]
             tr = max(
                 highs[i] - lows[i],
-                abs(highs[i] - highs[i - 1]),
-                abs(lows[i] - lows[i - 1]),
+                abs(highs[i] - prev_c),
+                abs(lows[i] - prev_c),
             )
             tr_values.append(tr)
         atr = sum(tr_values) / len(tr_values) if tr_values else 0.0
     else:
         atr = 0.0
 
-    # RSI (Relative Strength Index) - simplified 14-period
-    if len(closes) >= 15:
-        gains = []
-        losses = []
-        for i in range(1, min(15, len(closes))):
-            diff = closes[i] - closes[i - 1]
-            if diff > 0:
-                gains.append(diff)
-                losses.append(0.0)
-            else:
-                gains.append(0.0)
-                losses.append(-diff)
-        avg_gain = sum(gains) / len(gains) if gains else 0.0
-        avg_loss = sum(losses) / len(losses) if losses else 0.0
-        rs = avg_gain / avg_loss if avg_loss != 0 else 0.0
-        rsi = 100.0 - (100.0 / (1.0 + rs))
+    # Wilder RSI over the latest 14 bars
+    rsi = _wilder_rsi(closes, 14)
+
+    # Trend slope over the last N bars (relative price change)
+    trend_window = min(10, len(closes) - 1)
+    if trend_window >= 1 and closes[-1 - trend_window] != 0:
+        trend_slope = (closes[-1] - closes[-1 - trend_window]) / closes[-1 - trend_window]
     else:
-        rsi = 50.0  # neutral
+        trend_slope = 0.0
 
     # Regime features
     regime_features = {
         "realised_vol": realised_vol,
-        "trend_slope": price_change,
+        "trend_slope": trend_slope,
         "spread": 0.0,  # placeholder - would need bid/ask data
     }
 
@@ -157,11 +191,11 @@ def compute_from_bars(symbol: str, timeframe: str, bars: list[list[float]]) -> S
         raise ValueError(msg)
 
     # Build and return the snapshot
-    snapshot_id = f"{symbol}_{timeframe}_{int(datetime.utcnow().timestamp())}"
+    snapshot_id = f"{symbol}_{timeframe}_{int(datetime.now(IST).timestamp())}"
 
     return StateSnapshot(
         snapshot_id=snapshot_id,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(IST),
         symbol=symbol,
         timeframe=timeframe,
         ohlcv_tail=ohlcv_tail,

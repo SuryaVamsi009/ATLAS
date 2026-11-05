@@ -15,9 +15,12 @@ import time
 import logging
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 # Kite Connect API endpoints
@@ -103,9 +106,7 @@ class KiteAdapter:
         # Market hours: 09:15 - 15:30 IST
         # For demonstration, we'll check the current time
         # In a real implementation, this would make an API call or check exchange hours
-        now = datetime.now()
-        ist_offset = 5 + 30 / 60  # IST is UTC+5:30
-        ist_time = now + __import__("datetime").timedelta(hours=ist_offset)
+        ist_time = datetime.now(IST)
         market_open = ist_time.replace(hour=9, minute=15, second=0, microsecond=0).time()
         market_close = ist_time.replace(hour=15, minute=30, second=0, microsecond=0).time()
         current_time = ist_time.time()
@@ -238,7 +239,7 @@ class KiteAdapter:
                 "price": price,
                 "stop_price": stop_price,
                 "validity": "day",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(IST).isoformat(),
             }
 
             logger.info("Order placed successfully: %s", result["order_id"])
@@ -285,7 +286,7 @@ class KiteAdapter:
             result = {
                 "order_id": order_id,
                 "status": status,
-                "cancelled_at": datetime.now().isoformat(),
+                "cancelled_at": datetime.now(IST).isoformat(),
             }
 
             logger.info("Order cancelled successfully: %s", order_id)
@@ -313,7 +314,7 @@ class KiteAdapter:
             positions = {
                 "net": {},
                 "day": {},
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(IST).isoformat(),
             }
 
             logger.info("Fetched positions successfully")
@@ -355,7 +356,7 @@ class KiteAdapter:
                     "low": 1518.00,
                     "close": 1522.50,
                 },
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(IST).isoformat(),
             }
 
             logger.info("Fetched quote for %s: %s", symbol, quote["last_price"])
@@ -385,7 +386,7 @@ class KiteAdapter:
                 "buying_power": 100000.0,
                 "margin_available": 0.0,
                 "funds": 100000.0,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(IST).isoformat(),
             }
 
             logger.info("Fetched account info successfully")

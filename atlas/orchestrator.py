@@ -15,12 +15,15 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional
+from zoneinfo import ZoneInfo
 
+from atlas import journal as journal_ledger
 from atlas.decision_proposal import DecisionProposal
 from atlas.eval_set import Outcome
-from atlas.risk_verdict import RiskVerdict, verify
+from atlas.risk_verdict import RiskVerdict, VetoReason, verify
 from atlas.research_ai import ResearchAI, ConfigDrivenResearchAI
 from atlas.rag_corpus import RAGCorpus
 from atlas.state_snapshot import StateSnapshot, compute_from_bars
@@ -28,6 +31,8 @@ from atlas.brokers.kite_adapter import KiteAdapter, RateLimitError
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 class OrchestratorConfig:
@@ -147,6 +152,9 @@ class Orchestrator:
         # Journal (ledger) - stores completed cycle results
         self.journal: list[Dict[str, Any]] = []
 
+        # Rate limit tracking (instance attribute so _place_order can use it)
+        self.api_call_count = 0
+
         logger.info(
             f"Orchestrator initialized: paper_trading={config.paper_trading}, "
             f"ai_provider={config.ai_provider}, min_confidence={config.min_confidence}"
@@ -203,7 +211,7 @@ class Orchestrator:
         }
 
         # Rate limit tracking per cycle
-        api_call_count = 0
+        self.api_call_count = 0
         max_api_calls = self.config.max_api_calls_per_cycle
 
         try:

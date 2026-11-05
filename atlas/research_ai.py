@@ -13,9 +13,12 @@ structured data (StateSnapshot, DecisionProposal, RiskVerdict, RAGCorpus).
 from __future__ import annotations
 
 import abc
+import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class ResearchAI(abc.ABC):
@@ -124,7 +127,7 @@ class ConfigDrivenResearchAI(ResearchAI):
 
         if ai_provider == "openai":
             config["api_key"] = os.environ.get("OPENAI_API_KEY")
-            config["model"] = os.environ.get("OPENAI_MODEL", "gpt-4o-minimum")
+            config["model"] = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
             config["endpoint"] = "https://api.openai.com/v1/chat/completions"
         elif ai_provider == "anthropic":
             config["api_key"] = os.environ.get("ANTHROPIC_API_KEY")

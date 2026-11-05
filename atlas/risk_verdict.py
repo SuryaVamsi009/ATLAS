@@ -10,19 +10,17 @@ The engine is model-agnostic and has no AI provider dependencies.
 
 from __future__ import annotations
 
-import os
-import sys
+import math
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 from enum import Enum
+from typing import Any
+from zoneinfo import ZoneInfo
 
-# Ensure atlas submodules are importable when this file is loaded directly
-_AtlasDir = os.path.dirname(os.path.abspath(__file__))
-if _AtlasDir not in sys.path:
-    sys.path.insert(0, _AtlasDir)
+from atlas.decision_proposal import DecisionProposal
+from atlas.state_snapshot import StateSnapshot
 
-from decision_proposal import DecisionProposal
-from state_snapshot import StateSnapshot
+IST = ZoneInfo("Asia/Kolkata")
 
 
 class VetoReason(Enum):
@@ -35,8 +33,8 @@ class VetoReason(Enum):
     NONE = None
 
     def __bool__(self) -> bool:
-        """Return False for valid (OK) reasons, True for None."""
-        return self is VetoReason.NONE
+        """True when this is a real veto (i.e. not NONE)."""
+        return self is not VetoReason.NONE
 
 
 @dataclass
@@ -81,44 +79,51 @@ def _check_size_ok(proposal: DecisionProposal, context: dict[str, Any]) -> tuple
 
 def _check_loss_ok(proposal: DecisionProposal, snapshot: StateSnapshot, context: dict[str, Any]) -> tuple[bool, float]:
     """
-    Check: unrealised_pnl + proposed loss stays within daily/weekly limits.
+    Check: daily/weekly PnL plus the proposed trade's risk stays within limits.
 
-    Uses snapshot.account.daily_pnl and snapshot.position.unrealised_pnl
-    to check against max_daily_loss and max_weekly_loss from context.
+    Risk per trade is (entry - stop) x quantity for a long (and
+    (stop - entry) x quantity for a short). Uses snapshot.account.daily_pnl
+    and snapshot.account.weekly_pnl against max_daily_loss / max_weekly_loss.
 
     Returns:
-        (passed, adjusted_qty) tuple. If check fails, adjusted_qty is reduced
-        to stay within limits. If check passes, adjusted_qty = size_hint * equity.
+        (passed, adjusted_notional) tuple. If a check fails, adjusted_notional
+        is reduced to stay within the limit (0.0 if nothing is allowed).
     """
     daily_loss_limit = context.get("max_daily_loss", 1000.0)
     weekly_loss_limit = context.get("max_weekly_loss", 5000.0)
     equity = context.get("equity", 10000.0)
 
-    unrealised_pnl = snapshot.position.get("unrealised_pnl", 0.0)
-    at_risk = proposal.size_hint * equity
-    proposed_loss = at_risk
+    entry = snapshot.ohlcv_tail[-1] if snapshot.ohlcv_tail else 0.0
+    stop = proposal.stop_hint if proposal.stop_hint is not None else entry
+    notional = proposal.size_hint * equity
+    qty = notional / entry if entry > 0 else 0.0
 
-    total_loss = unrealised_pnl + proposed_loss
+    is_long = str(proposal.action).upper() in ("BUY", "LONG", "1")
+    per_unit_risk = (entry - stop) if is_long else (stop - entry)
+    at_risk = max(per_unit_risk, 0.0) * qty
 
-    # Check daily limit
-    if total_loss > daily_loss_limit:
-        allowed_at_risk = daily_loss_limit - unrealised_pnl
-        if allowed_at_risk > 0:
-            adjusted_qty = (allowed_at_risk / equity) * proposal.size_hint
+    daily_pnl = snapshot.account.get("daily_pnl", 0.0)
+    weekly_pnl = snapshot.account.get("weekly_pnl", daily_pnl)
+
+    # Daily limit check
+    if daily_pnl - at_risk < -daily_loss_limit:
+        allowed_risk = daily_loss_limit + daily_pnl
+        if allowed_risk > 0 and at_risk > 0:
+            adjusted_notional = notional * (allowed_risk / at_risk)
         else:
-            adjusted_qty = 0.0
-        return False, adjusted_qty
+            adjusted_notional = 0.0
+        return False, adjusted_notional
 
-    # Check weekly limit
-    if total_loss > weekly_loss_limit:
-        allowed_at_risk = weekly_loss_limit - unrealised_pnl
-        if allowed_at_risk > 0:
-            adjusted_qty = (allowed_at_risk / equity) * proposal.size_hint
+    # Weekly limit check (reachable independently of the daily check)
+    if weekly_pnl - at_risk < -weekly_loss_limit:
+        allowed_risk = weekly_loss_limit + weekly_pnl
+        if allowed_risk > 0 and at_risk > 0:
+            adjusted_notional = notional * (allowed_risk / at_risk)
         else:
-            adjusted_qty = 0.0
-        return False, adjusted_qty
+            adjusted_notional = 0.0
+        return False, adjusted_notional
 
-    return True, proposal.size_hint * equity
+    return True, notional
 
 
 def _check_hours_ok(context: dict[str, Any]) -> tuple[bool, None]:
@@ -136,9 +141,9 @@ def _check_hours_ok(context: dict[str, Any]) -> tuple[bool, None]:
         return False, None
 
     if current_time.tzinfo is None:
-        ist_time = current_time + timedelta(hours=5, minutes=30)
+        ist_time = current_time.replace(tzinfo=IST)
     else:
-        ist_time = current_time
+        ist_time = current_time.astimezone(IST)
 
     market_open = time(9, 15)
     market_close = time(15, 30)
@@ -247,26 +252,25 @@ def verify(proposal: DecisionProposal, snapshot: StateSnapshot, context: dict[st
     # approved: True only if ALL 5 checks pass
     approved = all(checks.values())
 
-    # Calculate final_qty: start with base size_hint * equity
-    final_qty = proposal.size_hint * equity
+    # Entry price from the latest close; final_qty is whole shares
+    entry_price = snapshot.ohlcv_tail[-1] if snapshot.ohlcv_tail else 0.0
     final_stop = proposal.stop_hint if proposal.stop_hint is not None else 0.0
+
+    # Calculate final notional (rupees), then convert to whole-share quantity
+    final_notional = proposal.size_hint * equity
 
     # Apply adjustments based on veto reason
     if veto_reason == VetoReason.SIZE_OK:
-        final_qty = size_qty
+        final_notional = size_qty
     elif veto_reason == VetoReason.LOSS_OK:
-        final_qty = loss_qty
+        final_notional = loss_qty
     elif veto_reason == VetoReason.CONFIDENCE_OK:
-        final_qty = proposal.size_hint * equity * conf_factor
+        final_notional = proposal.size_hint * equity * conf_factor
     elif veto_reason == VetoReason.SYMBOL_OK:
-        final_qty = 0.0
-    # If veto_reason is NONE (all passed), final_qty stays as size_hint * equity
+        final_notional = 0.0
+    # If veto_reason is NONE (all passed), final_notional stays as size_hint * equity
 
-    # final_stop: use proposal.stop_hint if available, else 0.0
-    if proposal.stop_hint is not None:
-        final_stop = proposal.stop_hint
-    else:
-        final_stop = 0.0
+    final_qty = math.floor(final_notional / entry_price) if entry_price > 0 else 0.0
 
     return RiskVerdict(
         approved=approved,
