@@ -149,9 +149,6 @@ class Orchestrator:
             paper_trading=config.paper_trading,
         )
 
-        # Journal (ledger) - stores completed cycle results
-        self.journal: list[Dict[str, Any]] = []
-
         # Rate limit tracking (instance attribute so _place_order can use it)
         self.api_call_count = 0
 
@@ -161,6 +158,91 @@ class Orchestrator:
         )
 
     def run_cycle(
+        self,
+        market_data: list[list[float]],
+        news_context: str,
+        context_dict: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Run a cycle and persist its result as the authoritative journal record."""
+        try:
+            result = self._run_cycle(market_data, news_context, context_dict)
+        except Exception as exc:
+            logger.exception("Unexpected orchestration error")
+            result = {
+                "step1_snapshot": None,
+                "step2_regime_flags": [],
+                "step2_event_alerts": [],
+                "step3_decision_proposal": None,
+                "step4_risk_verdict": None,
+                "step5_order_placed": False,
+                "step5_order_details": None,
+                "step6_journal_entry": None,
+                "step7_success": False,
+                "step7_error": f"Unexpected orchestration error: {exc}",
+            }
+
+        snapshot = result["step1_snapshot"]
+        decision_proposal = result["step3_decision_proposal"]
+        risk_verdict = result["step4_risk_verdict"]
+        error = result["step7_error"]
+        failure_stage = None
+        if error:
+            failure_stage = "orchestration"
+            for prefix, stage in (
+                ("Step 1 failed:", "snapshot"),
+                ("Step 2 failed:", "research"),
+                ("Step 3 failed:", "decision"),
+                ("Step 4 failed:", "risk"),
+                ("Step 5 failed:", "execution"),
+                ("Step 6 failed:", "journal"),
+            ):
+                if error.startswith(prefix):
+                    failure_stage = stage
+                    break
+
+        rejected = risk_verdict is not None and not risk_verdict.approved
+        status = "failed" if error else "rejected" if rejected else "completed"
+        if rejected:
+            step = "risk_rejection"
+        elif error:
+            step = "execution_failure" if failure_stage == "execution" else "cycle_failure"
+        else:
+            step = "approved_trade"
+
+        journal_entry = result["step6_journal_entry"]
+        if journal_entry is None:
+            journal_entry = self._create_journal_entry(
+                snapshot=snapshot,
+                decision_proposal=decision_proposal,
+                risk_verdict=risk_verdict,
+                order_details=result["step5_order_details"] or {},
+                regime_flags=result["step2_regime_flags"],
+                event_alerts=result["step2_event_alerts"],
+                step=step,
+                status=status,
+                error=error,
+                failure_stage=failure_stage,
+            )
+        journal_entry.update(
+            status=status,
+            error=error,
+            failure_stage=failure_stage,
+        )
+        try:
+            journal_entry["entry_id"] = journal_ledger.write_cycle_entry(journal_entry)
+        except Exception as exc:
+            logger.exception("Failed to persist cycle journal entry")
+            journal_entry["status"] = "persistence_failed"
+            journal_entry["persistence_error"] = str(exc)
+            result["step7_success"] = False
+            persistence_error = f"Journal persistence failed: {exc}"
+            result["step7_error"] = (
+                f"{error}; {persistence_error}" if error else persistence_error
+            )
+        result["step6_journal_entry"] = journal_entry
+        return result
+
+    def _run_cycle(
         self,
         market_data: list[list[float]],
         news_context: str,
@@ -308,32 +390,6 @@ class Orchestrator:
                 logger.info(
                     f"Trade rejected by risk: {risk_verdict.veto_reason}"
                 )
-                result["step6_journal_entry"] = {
-                    "step": "risk_rejection",
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "veto_reason": risk_verdict.veto_reason,
-                    "decision_proposal": {
-                        "action": decision_proposal.action,
-                        "confidence": decision_proposal.confidence,
-                        "size_hint": decision_proposal.size_hint,
-                    },
-                    "risk_verdict": {
-                        "approved": risk_verdict.approved,
-                        "veto_reason": risk_verdict.veto_reason,
-                        "checks": risk_verdict.checks,
-                    },
-                }
-                journal_entry = self._create_journal_entry(
-                    snapshot=snapshot,
-                    decision_proposal=decision_proposal,
-                    risk_verdict=risk_verdict,
-                    order_details={},
-                    regime_flags=regime_flags,
-                    event_alerts=event_alerts,
-                    step="risk_rejection",
-                )
-                self.journal.append(journal_entry)
-                result["step6_journal_entry"] = journal_entry
                 result["step7_success"] = True
                 result["step7_error"] = None
                 return result
@@ -358,33 +414,9 @@ class Orchestrator:
                 return result
 
             # =========================================================================
-            # Step 6: Update Journal with call details
+            # Step 6: Return result dict; the public method persists the journal
             # =========================================================================
-            logger.info("Step 6: Updating Journal")
-            try:
-                journal_entry = self._create_journal_entry(
-                    snapshot=snapshot,
-                    decision_proposal=decision_proposal,
-                    risk_verdict=risk_verdict,
-                    order_details=order_details,
-                    regime_flags=regime_flags,
-                    event_alerts=event_alerts,
-                )
-                self.journal.append(journal_entry)
-                result["step6_journal_entry"] = journal_entry
-                logger.info(f"Step 6 complete: journal entry added (id={len(self.journal)})")
-            except Exception as e:
-                error_msg = f"Step 6 failed: {str(e)}"
-                logger.error(error_msg)
-                # Step 6 failure doesn't prevent cycle success, but we log it
-                result["step7_error"] = error_msg
-                result["step7_success"] = False
-                return result
-
-            # =========================================================================
-            # Step 7: Return result dict with all step outputs
-            # =========================================================================
-            logger.info("Step 7: Cycle complete - returning result")
+            logger.info("Cycle processing complete - returning result")
             result["step7_success"] = True
             result["step7_error"] = None
             return result
@@ -604,15 +636,15 @@ class Orchestrator:
         retry_count = 0
 
         while retry_count <= max_retries:
-            api_call_count += 1
-            if api_call_count > self.config.max_api_calls_per_cycle:
+            self.api_call_count += 1
+            if self.api_call_count > self.config.max_api_calls_per_cycle:
                 wait_time = backoff_factor ** retry_count
                 logger.warning(
-                    f"API call limit reached ({api_call_count}/{self.config.max_api_calls_per_cycle}). "
+                    f"API call limit reached ({self.api_call_count}/{self.config.max_api_calls_per_cycle}). "
                     f"Backing off for {wait_time}s (retry {retry_count}/{max_retries})"
                 )
                 time.sleep(wait_time)
-                api_call_count = 0  # reset after backoff
+                self.api_call_count = 0  # reset after backoff
 
             try:
                 order_result = self.kite_adapter.place_order(
@@ -652,15 +684,18 @@ class Orchestrator:
 
     def _create_journal_entry(
         self,
-        snapshot: StateSnapshot,
-        decision_proposal: DecisionProposal,
-        risk_verdict: RiskVerdict,
-        order_details: Dict[str, Any],
-        regime_flags: list[str],
-        event_alerts: list[str],
+        snapshot: Optional[StateSnapshot] = None,
+        decision_proposal: Optional[DecisionProposal] = None,
+        risk_verdict: Optional[RiskVerdict] = None,
+        order_details: Optional[Dict[str, Any]] = None,
+        regime_flags: Optional[list[str]] = None,
+        event_alerts: Optional[list[str]] = None,
         step: str = "approved_trade",
+        status: str = "completed",
+        error: Optional[str] = None,
+        failure_stage: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create a journal entry for the completed cycle.
+        """Create a structured journal record from the results available.
 
         The journal serves as the ledger - all communication between layers
         is recorded here through structured data.
@@ -678,30 +713,41 @@ class Orchestrator:
             Dict representing the journal entry.
         """
         entry: Dict[str, Any] = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "snapshot_id": snapshot.snapshot_id,
-            "symbol": snapshot.symbol,
-            "timeframe": snapshot.timeframe,
+            "timestamp": datetime.now(IST).isoformat(),
+            "snapshot_id": snapshot.snapshot_id if snapshot else None,
+            "symbol": snapshot.symbol if snapshot else None,
+            "timeframe": snapshot.timeframe if snapshot else None,
             "step": step,
-            "decision_proposal": {
-                "action": decision_proposal.action,
-                "confidence": decision_proposal.confidence,
-                "size_hint": decision_proposal.size_hint,
-                "stop_hint": decision_proposal.stop_hint,
-                "rationale": decision_proposal.rationale,
-            },
-            "risk_verdict": {
-                "approved": risk_verdict.approved,
-                "final_qty": risk_verdict.final_qty,
-                "final_stop": risk_verdict.final_stop,
-                "veto_reason": risk_verdict.veto_reason.value
-                if risk_verdict.veto_reason
-                else None,
-                "checks": risk_verdict.checks,
-            },
-            "order_details": order_details,
-            "regime_flags": regime_flags,
-            "event_alerts": event_alerts,
+            "status": status,
+            "error": error,
+            "failure_stage": failure_stage,
+            "decision_proposal": (
+                {
+                    "action": decision_proposal.action,
+                    "confidence": decision_proposal.confidence,
+                    "size_hint": decision_proposal.size_hint,
+                    "stop_hint": decision_proposal.stop_hint,
+                    "rationale": decision_proposal.rationale,
+                }
+                if decision_proposal
+                else None
+            ),
+            "risk_verdict": (
+                {
+                    "approved": risk_verdict.approved,
+                    "final_qty": risk_verdict.final_qty,
+                    "final_stop": risk_verdict.final_stop,
+                    "veto_reason": risk_verdict.veto_reason.value
+                    if risk_verdict.veto_reason
+                    else None,
+                    "checks": risk_verdict.checks,
+                }
+                if risk_verdict
+                else None
+            ),
+            "order_details": order_details or {},
+            "regime_flags": regime_flags or [],
+            "event_alerts": event_alerts or [],
             "config": {
                 "min_confidence": self.config.min_confidence,
                 "min_rr": self.config.min_rr,

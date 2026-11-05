@@ -32,6 +32,7 @@ import json
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from atlas.decision_proposal import DecisionProposal
@@ -70,7 +71,7 @@ def write_cycle_entry(entry: Dict[str, Any]) -> str:
     Returns:
         entry_id of the written ledger entry.
     """
-    entry_id = f"cycle_{entry.get('snapshot_id', 'unknown')}_{int(datetime.now(IST).timestamp())}"
+    entry_id = f"cycle_{uuid4().hex}"
     record = dict(entry)
     record["entry_id"] = entry_id
     record.setdefault("timestamp", datetime.now(IST).isoformat())
