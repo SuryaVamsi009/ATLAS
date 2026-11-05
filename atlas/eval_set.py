@@ -12,9 +12,7 @@ import random
 from datetime import datetime, timedelta
 from typing import Any
 
-import yfinance as yf
-
-from decision_proposal import DecisionProposal
+from atlas.decision_proposal import DecisionProposal
 from atlas.risk_verdict import RiskVerdict, StateSnapshot, VetoReason
 from atlas.state_snapshot import compute_from_bars
 
@@ -120,6 +118,8 @@ def _fetch_bars(
 
     Returns bars in the format [timestamp_ms, open, high, low, close, volume].
     """
+    import yfinance as yf
+
     try:
         ticker = yf.Ticker(symbol)
         hist = ticker.history(start=start, end=end, interval=timeframe)
