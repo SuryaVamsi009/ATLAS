@@ -87,7 +87,9 @@ Custom agents live in `.github/agents/`:
 | **Goldmen Intern** | Indian equity market scan and intelligence reporting; feeds the ATLAS RAG corpus |
 | **The Director** | Reviews intern reports, produces executive summaries and mentorship feedback |
 | **Sensei** | ATLAS architecture assistant — agent creation, 6-layer management, regime detection |
-| **Pacman** | Platform engineer — repository integration and end-to-end feature engineering (L1–L6) |
+| **Mergesmith** | Platform engineer — repository integration and end-to-end feature engineering (L1–L6) |
+| **Ben** | Bug fix specialist — diagnosing and fixing issues across all 6 ATLAS layers |
+| **Pacman** | Bug finder — systematic codebase scanning to discover hidden bugs and violations |
 | **Jira Agent** | Jira issue management via the Atlassian MCP server |
 | **Notion Agent** | Notion page/database management via the Notion MCP server |
 | **Custom Agent Template** | Starting point for new agents |
