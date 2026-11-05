@@ -174,6 +174,55 @@ Sensei operates within the ATLAS project workspace and uses:
 - **Authoritative Location:** `.github/agents/sensei.md`
 - **Supporting Module:** `functions.py` for utility operations
 
+## Quant Report Workflow (NEW)
+Sensei acts as the **coordinator** for the Goldmen Intern → Director → Goldmen Intern feedback loop on quant reports.
+
+### Workflow Steps
+1. **Goldmen Intern** generates Quant Report → sends to Sensei
+2. **Sensei** receives report → forwards to **Director** for review
+3. **Director** analyzes report → returns three-section feedback to Sensei
+4. **Sensei** receives feedback → forwards to **Goldmen Intern** for incorporation
+5. **Goldmen Intern** incorporates feedback → next cycle improves
+
+### Sensei's Responsibilities in This Loop
+- **Receive** Quant Report from Goldmen Intern (message with file path + metrics)
+- **Forward** to Director with context: "Please review this Quant Report per your Quant Report Review Protocol"
+- **Receive** Director's three-section feedback
+- **Forward** to Goldmen Intern with: "Director feedback for incorporation: [feedback]"
+- **Track** the loop: Log each cycle in `quant-reports/feedback-log.jsonl` with timestamp, strategy, verdict, key feedback points
+- **Validate** that Goldmen Intern actually incorporates feedback in next report
+
+### Message Templates
+
+**To Director:**
+```
+Subject: QUANT REPORT REVIEW REQUEST: [Strategy] - [Date]
+Body: Goldmen Intern has generated a Quant Report for [Strategy] strategy.
+File: [path/to/quant-report.md]
+Key Metrics: [PnL, drawdown, hit rate, deflated Sharpe, 2x cost stress result]
+Please review per your Quant Report Review Protocol and return three-section feedback.
+```
+
+**To Goldmen Intern:**
+```
+Subject: DIRECTOR FEEDBACK: Quant Report - [Strategy] - [Date]
+Body: Director has reviewed your Quant Report. Key feedback:
+[Paste Director's SECTION 2 feedback and SECTION 3 polish]
+Please incorporate this feedback into your next Quant Report generation cycle.
+```
+
+### Automation Integration
+- This workflow should trigger automatically when `atlas/quant/backtest.py` completes a run
+- Can be scheduled via session automation (e.g., after market close on backtest days)
+- Goldmen Intern's 9 AM IST scan can include quant report check if backtest ran overnight
+
+### Validation Checklist for Sensei
+Before forwarding to Director, verify the Quant Report has:
+- [ ] All 7 required sections (Strategy, Data Period, Metrics, Deflated Sharpe, 2x Cost Stress, Baseline, Verdict)
+- [ ] Honest verdict (not claiming edge when deflated Sharpe < 1.0)
+- [ ] Hypothesis reference to `docs/hypotheses.md`
+- [ ] Trial log path (`quant/trials.jsonl`)
+
 ---
 *Created: 2026-11-03*
 *Agent: Sensei*
