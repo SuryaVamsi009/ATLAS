@@ -1,5 +1,21 @@
 # ATLAS Skills Configuration
 
+## Installed Skill Packages (skills CLI)
+
+Agent skills are installed via the [skills](https://github.com/vercel-labs/skills) CLI into `.agents/skills/` (universal layout, recognized by GitHub Copilot and 20+ agents), with Claude Code symlinks in `.claude/skills/`. Packages are pinned in `skills-lock.json`.
+
+| Package | Source | Skills | Installed |
+|---------|--------|--------|-----------|
+| `mattpocock/skills` | https://github.com/mattpocock/skills | 38 | 2026-11-05 |
+
+```bash
+npx skills@latest add mattpocock/skills --skill '*' -y   # install
+npx skills@latest list                                    # list installed
+npx skills@latest update --project -y                     # update
+```
+
+Notable skills: `ask-matt` (router), `tdd`, `code-review`, `diagnosing-bugs`, `implement`, `to-spec`, `to-tickets`, `pr`, `research`, `retro`, `grill-with-docs`, `domain-modeling`.
+
 ## Enabled Skills (from settings.json)
 
 The following MCP skills are enabled in `/Users/suryavamsipichika/.copilot/settings.json`:
