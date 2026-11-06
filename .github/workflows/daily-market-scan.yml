@@ -40,8 +40,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Check if there are changes
-          if git diff --quiet; then
+          # Check if there are changes — git status --porcelain also catches
+          # new untracked report files, which git diff --quiet misses
+          if [ -z "$(git status --porcelain)" ]; then
             echo "No changes to commit"
           else
             git add market-scan/

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Agent Validation Script for ATLAS
-Validates YAML frontmatter and tests agent loading for all agents in .copilot/agents/
+Validates YAML frontmatter and tests agent loading for all agents in .github/agents/
 """
 
 import yaml
