@@ -14,7 +14,7 @@ All rates are configurable via IndianCostConfig.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
@@ -43,7 +43,7 @@ class IndianCostConfig:
     # GST on (brokerage + exchange + sebi)
     gst_rate: float = 0.18               # 18%
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "brokerage_rate": self.brokerage_rate,
             "brokerage_cap": self.brokerage_cap,

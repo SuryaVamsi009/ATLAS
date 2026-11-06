@@ -13,7 +13,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Tuple
 from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class ValidationConfig:
     holdout_fraction: float = 0.2        # fraction of data reserved as untouched hold-out
     trial_log_path: str = "atlas/quant/trials.jsonl"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "n_splits": self.n_splits,
             "purge_bars": self.purge_bars,
@@ -47,8 +47,8 @@ class WalkForwardSplit:
     train_end: int
     test_start: int
     test_end: int
-    train_bars: List[List[float]]
-    test_bars: List[List[float]]
+    train_bars: list[list[float]]
+    test_bars: list[list[float]]
 
 
 class TrialLog:
@@ -64,9 +64,9 @@ class TrialLog:
     def log_trial(
         self,
         strategy_name: str,
-        params: Dict[str, Any],
-        metrics: Dict[str, Any],
-        split_index: Optional[int] = None,
+        params: dict[str, Any],
+        metrics: dict[str, Any],
+        split_index: int | None = None,
         is_holdout: bool = False,
     ) -> str:
         """Log a single trial. Returns the trial ID."""
@@ -84,7 +84,7 @@ class TrialLog:
             f.write(json.dumps(entry, default=str) + "\n")
         return trial_id
 
-    def read_all(self) -> List[Dict[str, Any]]:
+    def read_all(self) -> list[dict[str, Any]]:
         """Read all trial entries."""
         if not self.path.exists():
             return []
@@ -114,7 +114,7 @@ class WalkForwardValidator:
         self.config = config or ValidationConfig()
         self.trial_log = TrialLog(self.config.trial_log_path)
 
-    def create_splits(self, bars: List[List[float]]) -> Tuple[List[WalkForwardSplit], List[List[float]]]:
+    def create_splits(self, bars: list[list[float]]) -> tuple[list[WalkForwardSplit], list[list[float]]]:
         """Create walk-forward splits and hold-out from bars.
 
         Returns:
@@ -154,11 +154,11 @@ class WalkForwardValidator:
 
     def run_validation(
         self,
-        bars: List[List[float]],
-        strategy_factory: Callable[[Dict[str, Any]], Callable],
-        param_grid: List[Dict[str, Any]],
+        bars: list[list[float]],
+        strategy_factory: Callable[[dict[str, Any]], Callable],
+        param_grid: list[dict[str, Any]],
         warmup: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run walk-forward validation over a parameter grid.
 
         Args:
@@ -174,7 +174,7 @@ class WalkForwardValidator:
         from atlas.quant.backtest.metrics import compute_backtest_metrics
 
         splits, holdout_bars = self.create_splits(bars)
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "n_splits": len(splits),
             "n_holdout_bars": len(holdout_bars),
             "param_results": [],

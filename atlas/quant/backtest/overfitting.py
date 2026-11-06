@@ -27,7 +27,7 @@ class OverfittingConfig:
     plateau_tolerance: float = 0.10      # params within 10% of best are "plateau"
     min_trials_for_deflation: int = 10   # minimum trials before deflated Sharpe is meaningful
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "cost_multiplier": self.cost_multiplier,
             "plateau_tolerance": self.plateau_tolerance,
@@ -117,7 +117,7 @@ class OverfittingChecker:
         observed_sharpe: float,
         n_trials: int,
         n_observations: int = 252,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if the observed Sharpe survives deflation for multiple testing."""
         dsr = deflated_sharpe(observed_sharpe, n_trials, n_observations=n_observations)
         psr = probability_of_sharpe(observed_sharpe, n_trials, n_observations)
@@ -132,11 +132,11 @@ class OverfittingChecker:
 
     def stress_test_costs(
         self,
-        bars: List[List[float]],
+        bars: list[list[float]],
         strategy_fn: Callable,
         base_config: BacktestConfig | None = None,
         warmup: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Re-run the backtest at 2x transaction costs.
 
         If performance collapses at 2x costs, the strategy is likely
@@ -182,9 +182,9 @@ class OverfittingChecker:
 
     def check_parameter_plateau(
         self,
-        param_results: List[Dict[str, Any]],
+        param_results: list[dict[str, Any]],
         metric_key: str = "avg_sharpe",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check that performance holds across a plateau of parameters.
 
         A robust strategy should perform well across a range of nearby
@@ -226,14 +226,14 @@ class OverfittingChecker:
 
     def run_all_checks(
         self,
-        bars: List[List[float]],
+        bars: list[list[float]],
         strategy_fn: Callable,
         n_trials: int,
-        param_results: List[Dict[str, Any]],
+        param_results: list[dict[str, Any]],
         base_config: BacktestConfig | None = None,
         warmup: int = 50,
         n_observations: int = 252,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run all overfitting checks.
 
         Returns:

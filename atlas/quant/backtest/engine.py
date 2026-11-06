@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 from atlas.quant.backtest.costs import CostModel, IndianCostConfig
@@ -26,11 +26,11 @@ class BacktestConfig:
     initial_capital: float = 50000.0       # ₹50,000 default
     fill_config: FillConfig = field(default_factory=FillConfig)
     cost_config: IndianCostConfig = field(default_factory=IndianCostConfig)
-    symbols: List[str] = field(default_factory=lambda: ["^NSEI"])
+    symbols: list[str] = field(default_factory=lambda: ["^NSEI"])
     bar_timeframe: str = "5m"
     force_flat_at_close: bool = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "initial_capital": self.initial_capital,
             "fill_config": self.fill_config.to_dict(),
@@ -57,7 +57,7 @@ class Trade:
     net_pnl: float       # pnl - cost
     r_multiple: float    # net_pnl / initial_risk
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "symbol": self.symbol,
             "entry_time": self.entry_time,
@@ -78,15 +78,15 @@ class BacktestResult:
     """Result of a backtest run."""
 
     config: BacktestConfig
-    trades: List[Trade]
-    equity_curve: List[Dict[str, Any]]   # [{timestamp, equity, cash, positions_value}]
-    fills: List[Dict[str, Any]]          # all fills (entries + exits)
+    trades: list[Trade]
+    equity_curve: list[dict[str, Any]]   # [{timestamp, equity, cash, positions_value}]
+    fills: list[dict[str, Any]]          # all fills (entries + exits)
     total_pnl: float
     total_costs: float
     net_pnl: float
     n_trades: int
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "config": self.config.to_dict(),
             "trades": [t.to_dict() for t in self.trades],
@@ -120,16 +120,16 @@ class BacktestEngine:
         self.cost_model = cost_model or CostModel(self.config.cost_config)
         self.fill_model = fill_model or FillModel(self.config.fill_config)
         self.cash: float = self.config.initial_capital
-        self.positions: Dict[str, Dict[str, Any]] = {}  # symbol -> position
-        self.trades: List[Trade] = []
-        self.fills: List[Dict[str, Any]] = []
-        self.equity_curve: List[Dict[str, Any]] = []
-        self.pending_orders: List[Dict[str, Any]] = []
+        self.positions: dict[str, dict[str, Any]] = {}  # symbol -> position
+        self.trades: list[Trade] = []
+        self.fills: list[dict[str, Any]] = []
+        self.equity_curve: list[dict[str, Any]] = []
+        self.pending_orders: list[dict[str, Any]] = []
 
     def run(
         self,
-        bars: List[List[float]],
-        strategy_fn: Callable[[List[List[float]], int, Dict[str, Any]], Optional[Dict[str, Any]]],
+        bars: list[list[float]],
+        strategy_fn: Callable[[list[list[float]], int, dict[str, Any]], dict[str, Any | None]],
         warmup: int = 50,
     ) -> BacktestResult:
         """Run the backtest over a series of bars.
@@ -209,7 +209,7 @@ class BacktestEngine:
         self.equity_curve = []
         self.pending_orders = []
 
-    def _fill_pending_orders(self, bar: List[float]) -> None:
+    def _fill_pending_orders(self, bar: list[float]) -> None:
         """Fill all pending orders at this bar's open + slippage."""
         if not self.pending_orders:
             return
@@ -221,12 +221,12 @@ class BacktestEngine:
         self.fills.extend(fills)
         self.pending_orders = []
 
-    def _submit_order(self, order: Dict[str, Any], current_bar: List[float]) -> None:
+    def _submit_order(self, order: dict[str, Any], current_bar: list[float]) -> None:
         """Submit an order - it will be filled at the NEXT bar's open."""
         order.setdefault("symbol", self.config.symbols[0] if self.config.symbols else "UNKNOWN")
         self.pending_orders.append(order)
 
-    def _execute_fill(self, fill: Dict[str, Any]) -> None:
+    def _execute_fill(self, fill: dict[str, Any]) -> None:
         """Execute a fill and update cash/positions."""
         symbol = fill["symbol"]
         side = fill["side"].upper()
@@ -301,7 +301,7 @@ class BacktestEngine:
                     "stop_price": fill.get("stop_price"),
                 }
 
-    def _force_flat_all(self, bar: List[float]) -> None:
+    def _force_flat_all(self, bar: list[float]) -> None:
         """Force close all open positions at the current bar's close."""
         for symbol in list(self.positions.keys()):
             pos = self.positions[symbol]
@@ -309,9 +309,9 @@ class BacktestEngine:
             self._execute_fill(fill)
             self.fills.append(fill)
 
-    def _compute_equity(self, bar: List[float]) -> float:
+    def _compute_equity(self, bar: list[float]) -> float:
         """Compute total equity (cash + positions value at current close)."""
         positions_value = sum(
             p["qty"] * bar[4] for p in self.positions.values()
         )
-        return self.cash + positions_value
+        return float(self.cash + positions_value)

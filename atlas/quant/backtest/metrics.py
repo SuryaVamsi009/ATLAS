@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 
@@ -22,7 +22,7 @@ class MetricsConfig:
     risk_free_rate_annual: float = 0.06   # 6% annual risk-free (India)
     bars_per_year: int = 252 * 78         # ~78 5-min bars per trading day
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "risk_free_rate_annual": self.risk_free_rate_annual,
             "bars_per_year": self.bars_per_year,
@@ -32,7 +32,7 @@ class MetricsConfig:
 def compute_backtest_metrics(
     result: BacktestResult,
     config: MetricsConfig | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compute comprehensive backtest metrics.
 
     Args:
@@ -133,11 +133,11 @@ def compute_backtest_metrics(
 
 
 def run_at_capital_levels(
-    bars: List[List[float]],
+    bars: list[list[float]],
     strategy_fn,
-    capitals: List[float] | None = None,
+    capitals: list[float] | None = None,
     warmup: int = 50,
-) -> Dict[float, Dict[str, Any]]:
+) -> dict[float, dict[str, Any]]:
     """Run the same strategy at multiple capital levels (e.g., ₹2,000 and ₹50,000).
 
     Args:

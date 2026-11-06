@@ -8,9 +8,9 @@
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from atlas.quant.backtest.engine import BacktestEngine, BacktestConfig, BacktestResult
+from atlas.quant.backtest.engine import BacktestConfig, BacktestEngine, BacktestResult
 
 
 class BuyAndHoldBaseline:
@@ -24,7 +24,7 @@ class BuyAndHoldBaseline:
         """Return a strategy callback for BacktestEngine.run()."""
         entered = {"done": False}
 
-        def strategy_fn(history: List[List[float]], idx: int, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        def strategy_fn(history: list[list[float]], idx: int, context: dict[str, Any]) -> dict[str, Any | None]:
             if entered["done"]:
                 return None
             # Buy with all available cash at the first tradeable bar
@@ -40,7 +40,7 @@ class BuyAndHoldBaseline:
 
         return strategy_fn
 
-    def run(self, bars: List[List[float]], config: BacktestConfig | None = None, warmup: int = 50) -> BacktestResult:
+    def run(self, bars: list[list[float]], config: BacktestConfig | None = None, warmup: int = 50) -> BacktestResult:
         cfg = config or BacktestConfig()
         engine = BacktestEngine(cfg)
         return engine.run(bars, self.make_strategy_fn(), warmup=warmup)
@@ -69,7 +69,7 @@ class RandomEntryBaseline:
         """Return a strategy callback for BacktestEngine.run()."""
         state = {"entry_bar": -1, "side": None}
 
-        def strategy_fn(history: List[List[float]], idx: int, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        def strategy_fn(history: list[list[float]], idx: int, context: dict[str, Any]) -> dict[str, Any | None]:
             # If in a position, exit after hold_bars
             if state["entry_bar"] >= 0:
                 if idx - state["entry_bar"] >= self.hold_bars:
@@ -97,7 +97,7 @@ class RandomEntryBaseline:
 
         return strategy_fn
 
-    def run(self, bars: List[List[float]], config: BacktestConfig | None = None, warmup: int = 50) -> BacktestResult:
+    def run(self, bars: list[list[float]], config: BacktestConfig | None = None, warmup: int = 50) -> BacktestResult:
         cfg = config or BacktestConfig()
         engine = BacktestEngine(cfg)
         return engine.run(bars, self.make_strategy_fn(), warmup=warmup)

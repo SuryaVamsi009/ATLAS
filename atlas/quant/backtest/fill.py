@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 from zoneinfo import ZoneInfo
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -29,7 +29,7 @@ class FillConfig:
     market_close_hour: int = MARKET_CLOSE_HOUR
     market_close_min: int = MARKET_CLOSE_MIN
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "slippage_bps": self.slippage_bps,
             "force_flat_at_close": self.force_flat_at_close,
@@ -68,7 +68,7 @@ class FillModel:
         else:
             return price * (1.0 - slip)
 
-    def fill_order(self, order: Dict[str, Any], next_bar: List[float]) -> Dict[str, Any]:
+    def fill_order(self, order: dict[str, Any], next_bar: list[float]) -> dict[str, Any]:
         """Fill an order at the next bar's open plus slippage.
 
         Args:
@@ -91,7 +91,7 @@ class FillModel:
             "slippage_applied": abs(fill_price - open_price),
         }
 
-    def is_market_close(self, timestamp_ms: int) -> bool:
+    def is_market_close(self, timestamp_ms: float) -> bool:
         """Check if a timestamp is at or after market close (15:30 IST)."""
         dt = datetime.fromtimestamp(timestamp_ms / 1000.0, tz=IST)
         close_time = dt.replace(
@@ -102,11 +102,11 @@ class FillModel:
         )
         return dt >= close_time
 
-    def should_force_flat(self, timestamp_ms: int) -> bool:
+    def should_force_flat(self, timestamp_ms: float) -> bool:
         """Check if positions should be force-flattened at this timestamp."""
         return self.config.force_flat_at_close and self.is_market_close(timestamp_ms)
 
-    def get_close_fill(self, position: Dict[str, Any], bar: List[float]) -> Dict[str, Any]:
+    def get_close_fill(self, position: dict[str, Any], bar: list[float]) -> dict[str, Any]:
         """Create a force-close fill at the current bar's close price.
 
         Args:
