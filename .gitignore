@@ -1,5 +1,7 @@
+# macOS
 .DS_Store
-.DS_Store
+.AppleDouble
+.LSOverride
 
 # Python cache
 __pycache__/
@@ -7,4 +9,55 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Project specific
+.journal/
+market-scan/*.md
+!market-scan/.gitkeep
+bugs/
 

@@ -13,21 +13,19 @@ Configuration is model-agnostic and config-driven.
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from atlas import journal as journal_ledger
-from atlas.decision_proposal import DecisionProposal
-from atlas.eval_set import Outcome
-from atlas.risk_verdict import RiskVerdict, VetoReason, verify
-from atlas.research_ai import ResearchAI, ConfigDrivenResearchAI
-from atlas.rag_corpus import RAGCorpus
-from atlas.state_snapshot import StateSnapshot, compute_from_bars
 from atlas.brokers.kite_adapter import KiteAdapter, RateLimitError
+from atlas.decision_proposal import DecisionProposal
+from atlas.rag_corpus import RAGCorpus
+from atlas.research_ai import ConfigDrivenResearchAI, ResearchAI
+from atlas.risk_verdict import RiskVerdict, verify
+from atlas.state_snapshot import StateSnapshot, compute_from_bars
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -52,7 +50,7 @@ class OrchestratorConfig:
         model_name: str = "rule-based",
         max_daily_loss: float = 1000.0,
         max_weekly_loss: float = 5000.0,
-        allowed_symbols: Optional[list] = None,
+        allowed_symbols: list | None = None,
         min_reward_to_risk: float = 2.0,
         max_api_calls_per_cycle: int = 10,
         rate_limit_backoff_factor: float = 2.0,
@@ -89,7 +87,7 @@ class OrchestratorConfig:
         self.rate_limit_backoff_factor = rate_limit_backoff_factor
         self.rate_limit_max_retries = rate_limit_max_retries
 
-    def to_context_dict(self) -> Dict[str, Any]:
+    def to_context_dict(self) -> dict[str, Any]:
         """Convert config to a context dict for risk verification.
 
         Returns:
@@ -124,9 +122,9 @@ class Orchestrator:
     def __init__(
         self,
         config: OrchestratorConfig,
-        research_ai: Optional[ResearchAI] = None,
-        rag_corpus: Optional[RAGCorpus] = None,
-        kite_adapter: Optional[KiteAdapter] = None,
+        research_ai: ResearchAI | None = None,
+        rag_corpus: RAGCorpus | None = None,
+        kite_adapter: KiteAdapter | None = None,
     ) -> None:
         """Initialize the Orchestrator.
 
@@ -161,8 +159,8 @@ class Orchestrator:
         self,
         market_data: list[list[float]],
         news_context: str,
-        context_dict: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        context_dict: dict[str, Any],
+    ) -> dict[str, Any]:
         """Run a cycle and persist its result as the authoritative journal record."""
         try:
             result = self._run_cycle(market_data, news_context, context_dict)
@@ -246,8 +244,8 @@ class Orchestrator:
         self,
         market_data: list[list[float]],
         news_context: str,
-        context_dict: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        context_dict: dict[str, Any],
+    ) -> dict[str, Any]:
         """Run one complete orchestration cycle.
 
         The complete cycle follows these steps:
@@ -279,7 +277,7 @@ class Orchestrator:
                 "step7_error": str or None,
             }
         """
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "step1_snapshot": None,
             "step2_regime_flags": [],
             "step2_event_alerts": [],
@@ -366,7 +364,7 @@ class Orchestrator:
             # =========================================================================
             logger.info("Step 4: Risk verification")
             try:
-                risk_context = self._build_risk_context(snapshot, decision_proposal)
+                risk_context = self._build_risk_context(snapshot, decision_proposal, context_dict)
                 risk_verdict: RiskVerdict = verify(
                     proposal=decision_proposal,
                     snapshot=snapshot,
@@ -437,7 +435,7 @@ class Orchestrator:
         self,
         snapshot: StateSnapshot,
         news_context: str,
-        context_dict: Dict[str, Any],
+        context_dict: dict[str, Any],
     ) -> tuple[list[str], list[str]]:
         """Run the Research AI analysis and return regime flags and event alerts.
 
@@ -462,7 +460,7 @@ class Orchestrator:
         snapshot: StateSnapshot,
         regime_flags: list[str],
         event_alerts: list[str],
-        context_dict: Dict[str, Any],
+        context_dict: dict[str, Any],
     ) -> DecisionProposal:
         """Generate a DecisionProposal based on Research AI output and market data.
 
@@ -579,27 +577,36 @@ class Orchestrator:
         return proposal
 
     def _build_risk_context(
-        self, snapshot: StateSnapshot, decision_proposal: DecisionProposal
-    ) -> Dict[str, Any]:
+        self,
+        snapshot: StateSnapshot,
+        decision_proposal: DecisionProposal,
+        context_dict: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Build the risk verification context dict from config and snapshot.
 
         Args:
             snapshot: StateSnapshot with current market state.
             decision_proposal: DecisionProposal to verify.
+            context_dict: Optional context dict from orchestrator (may contain current_time).
 
         Returns:
             Dict with risk context parameters.
         """
         equity = snapshot.account.get("equity", 10000.0)
 
-        context: Dict[str, Any] = {
+        # Use current_time from context_dict if provided, otherwise use now
+        current_time = context_dict.get("current_time") if context_dict else None
+        if current_time is None:
+            current_time = datetime.now()
+
+        context: dict[str, Any] = {
             "max_position_size": self.config.max_position_size,
             "max_daily_loss": self.config.max_daily_loss,
             "max_weekly_loss": self.config.max_weekly_loss,
             "min_confidence": self.config.min_confidence,
             "max_confidence": 0.9,
             "allowed_symbols": self.config.allowed_symbols,
-            "current_time": datetime.now(),
+            "current_time": current_time,
             "equity": equity,
             "symbol": snapshot.symbol,
         }
@@ -608,7 +615,7 @@ class Orchestrator:
 
     def _place_order(
         self, risk_verdict: RiskVerdict, snapshot: StateSnapshot, proposal_action: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Place an order via KiteAdapter if approved.
 
         Args:
@@ -694,17 +701,17 @@ class Orchestrator:
 
     def _create_journal_entry(
         self,
-        snapshot: Optional[StateSnapshot] = None,
-        decision_proposal: Optional[DecisionProposal] = None,
-        risk_verdict: Optional[RiskVerdict] = None,
-        order_result: Optional[Dict[str, Any]] = None,
-        regime_flags: Optional[list[str]] = None,
-        event_alerts: Optional[list[str]] = None,
+        snapshot: StateSnapshot | None = None,
+        decision_proposal: DecisionProposal | None = None,
+        risk_verdict: RiskVerdict | None = None,
+        order_result: dict[str, Any] | None = None,
+        regime_flags: list[str] | None = None,
+        event_alerts: list[str] | None = None,
         step: str = "approved_trade",
         status: str = "completed",
-        error: Optional[str] = None,
-        failure_stage: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        error: str | None = None,
+        failure_stage: str | None = None,
+    ) -> dict[str, Any]:
         """Create a structured journal record from the results available.
 
         The journal serves as the ledger - all communication between layers
@@ -723,7 +730,7 @@ class Orchestrator:
             Dict representing the journal entry.
         """
         timestamp_ist = datetime.now(IST).isoformat()
-        entry: Dict[str, Any] = {
+        entry: dict[str, Any] = {
             "timestamp_ist": timestamp_ist,
             "timestamp": timestamp_ist,
             "snapshot_id": snapshot.snapshot_id if snapshot else None,
