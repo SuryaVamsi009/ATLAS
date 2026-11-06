@@ -10,9 +10,6 @@ Modules:
   collector for Nifty 50 with gap/duplicate/timezone checks
 - features: Pure functions on bars (RSI, EMA, ATR, VWAP, opening range, gap)
 - strategies: Each strategy emits Signal(symbol, direction, conviction, horizon, stop_distance)
-- sizing: Size by risk (stop distance), in whole shares, with capital parameter
-- backtest: Event-driven engine replaying real bars through Orchestrator.run_cycle()
-- validation: Purged walk-forward splits, hold-out period, trial log, deflated Sharpe
 """
 
 from __future__ import annotations
@@ -20,15 +17,15 @@ from __future__ import annotations
 __version__ = "0.1.0"
 
 # Re-export key classes for convenience
-from atlas.quant.data import DataLoader, YFinanceLoader, ParquetCollector
-from atlas.quant.features import (
-    rsi, ema, atr, vwap, opening_range, gap,
-    compute_all_features
+from atlas.quant.data import DataLoader, ParquetCollector, YFinanceLoader
+from atlas.quant.features import atr, compute_all_features, ema, gap, opening_range, rsi, vwap
+from atlas.quant.strategies import (
+    GapFadeStrategy,
+    ORBStrategy,
+    Signal,
+    Strategy,
+    VWAPReversionStrategy,
 )
-from atlas.quant.strategies import Signal, Strategy, ORBStrategy, VWAPReversionStrategy, GapFadeStrategy
-from atlas.quant.sizing import size_by_risk
-from atlas.quant.backtest import BacktestEngine, BacktestResult
-from atlas.quant.validation import ValidationEngine, ValidationResult
 
 __all__ = [
     "DataLoader",
@@ -46,9 +43,4 @@ __all__ = [
     "ORBStrategy",
     "VWAPReversionStrategy",
     "GapFadeStrategy",
-    "size_by_risk",
-    "BacktestEngine",
-    "BacktestResult",
-    "ValidationEngine",
-    "ValidationResult",
 ]
