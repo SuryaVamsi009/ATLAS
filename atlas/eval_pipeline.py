@@ -11,19 +11,17 @@ backtest engine; never places orders.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, List, Optional, Dict
+from typing import Any
 
 # Use absolute imports; the package is on PATH when running from repo root
-from atlas.eval_set import compute_metrics, Outcome
-from atlas.research_ai import ConfigDrivenResearchAI
+from atlas.eval_set import Outcome, compute_metrics
 from atlas.rag_corpus import RAGCorpus
 
 
 def run_evaluation_pipeline(
-    bars: Optional[List[List[float]]] = None,
+    bars: list[list[float]] | None = None,
     use_fresh_data: bool = True,
-    rag_corpus: Optional[RAGCorpus] = None,
+    rag_corpus: RAGCorpus | None = None,
 ) -> dict[str, Any]:
     """Run the evaluation pipeline on real replayed bars.
 
@@ -143,8 +141,8 @@ def run_evaluation_pipeline(
 
 
 def quick_calibration_check(
-    eval_entries: List[dict[str, Any]],
-    confidence_bins: Optional[List[tuple[float, float]]] = None,
+    eval_entries: list[dict[str, Any]],
+    confidence_bins: list[tuple[float, float | None]] | None = None,
 ) -> dict[str, Any]:
     """Quick calibration check on existing eval entries.
 
@@ -160,7 +158,7 @@ def quick_calibration_check(
                           (0.4, 0.5), (0.5, 0.6), (0.6, 0.7), (0.7, 0.8),
                           (0.8, 0.9), (0.9, 1.0)]
 
-    results: Dict[str, Any] = {
+    results: dict[str, Any] = {
         "bins": [],
         "overall_success_rate": 0.0,
         "total_samples": len(eval_entries),
