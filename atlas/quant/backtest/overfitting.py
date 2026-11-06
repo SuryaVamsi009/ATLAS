@@ -12,12 +12,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
-
-import numpy as np
+from typing import Any, Callable, Dict, List
 
 from atlas.quant.backtest.costs import IndianCostConfig
-from atlas.quant.backtest.engine import BacktestConfig, BacktestEngine, BacktestResult
+from atlas.quant.backtest.engine import BacktestConfig, BacktestEngine
 from atlas.quant.backtest.metrics import compute_backtest_metrics
 
 

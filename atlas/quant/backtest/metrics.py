@@ -7,7 +7,7 @@ turnover, and cost drag. Capital is a parameter (run at ₹2,000 and ₹50,000).
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List
 
 import numpy as np
