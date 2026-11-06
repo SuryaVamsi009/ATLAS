@@ -520,6 +520,11 @@ def compute_metrics(eval_results: list[dict[str, Any]]) -> dict[str, Any]:
         r = float(ground_truth.get("r_multiple", 0.0))
         bins[bin_key]["r_multiples"].append(r)
 
+        # Increment basic metrics
+        if is_hit:
+            hits += 1
+        total_r += r
+
         # Horizon tracking
         if is_intraday:
             bins[bin_key]["intraday"].append(r)
@@ -542,14 +547,14 @@ def compute_metrics(eval_results: list[dict[str, Any]]) -> dict[str, Any]:
         1 for r in eval_results if r.get("timeframe", "1d") in ("1m", "5m", "15m", "1h")
     )
     intraday_hit_rate = intraday_hits / n_intraday if n_intraday > 0 else 0.0
-    intraday_avg_r = intraday_r / total if total > 0 else 0.0
+    intraday_avg_r = intraday_r / n_intraday if n_intraday > 0 else 0.0
 
     # Swing metrics
     n_swing = sum(
         1 for r in eval_results if r.get("timeframe", "1d") not in ("1m", "5m", "15m", "1h")
     )
     swing_hit_rate = swing_hits / n_swing if n_swing > 0 else 0.0
-    swing_avg_r = swing_r / total if total > 0 else 0.0
+    swing_avg_r = swing_r / n_swing if n_swing > 0 else 0.0
 
     # Confidence calibration – compute success rate per bin
     calibration = []

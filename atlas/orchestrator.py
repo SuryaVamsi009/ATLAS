@@ -498,13 +498,11 @@ class Orchestrator:
             confidence = 0.75
             size_hint = self.config.max_position_size * 0.8
             rationale_parts.append("trending_up regime")
-            stop_hint = None  # will be set by risk checks
         elif "trending_down" in regime_flags:
             action = "SELL"
             confidence = 0.75
             size_hint = self.config.max_position_size * 0.8
             rationale_parts.append("trending_down regime")
-            stop_hint = None
         elif "overbought" in regime_flags:
             action = "SELL"  # mean reversion
             confidence = 0.55
@@ -529,6 +527,7 @@ class Orchestrator:
         # --- Indicator-based adjustments ---
         indicators = getattr(snapshot, "indicators", {})
         rsi = indicators.get("rsi", 50.0)
+        atr = indicators.get("atr", 0.0)
 
         # Override action if RSI gives strong signal
         if rsi > 70 and action == "BUY":
@@ -539,6 +538,17 @@ class Orchestrator:
             action = "BUY"
             rationale_parts.append("RSI oversold overrides regime")
             confidence = 0.6
+
+        # --- ATR-based stop hint ---
+        # Use 2x ATR as stop distance from current price
+        current_price = snapshot.ohlcv_tail[-1] if snapshot.ohlcv_tail else 0.0
+        if atr > 0 and current_price > 0 and action in ("BUY", "SELL"):
+            stop_distance = atr * 2.0
+            if action == "BUY":
+                stop_hint = current_price - stop_distance
+            else:  # SELL
+                stop_hint = current_price + stop_distance
+            rationale_parts.append(f"ATR-based stop: {stop_hint:.2f} (2x ATR={atr:.2f})")
 
         # --- Size hint adjustment based on confidence ---
         size_hint = self.config.max_position_size * max(
