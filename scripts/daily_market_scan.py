@@ -36,14 +36,9 @@ HEADERS = {
 
 SOURCES = {
     'moneycontrol_markets': 'https://www.moneycontrol.com/markets/',
-    'moneycontrol_technical': 'https://www.moneycontrol.com/news/business/markets/technical-view-nifty-stages-strong-bullish-breakout-targets-23-600-bank-nifty-must-defend-20-day-ema-to-sustain-uptrend-14066573.html',
-    'moneycontrol_tradesetup': 'https://www.moneycontrol.com/news/business/markets/trade-setup-for-november-3-top-15-things-to-know-before-the-opening-bell-14066771.html',
-    'moneycontrol_reliance': 'https://www.moneycontrol.com/news/business/markets/reliance-s-12-surge-signals-breakout-can-the-stock-scale-a-new-peak-14066512.html',
-    'moneycontrol_choksey': 'https://www.moneycontrol.com/news/business/markets/deven-choksey-sets-rs-1-800-target-on-reliance-sees-scope-for-an-upgrade-14066454.html',
-    'moneycontrol_auto': 'https://www.moneycontrol.com/news/business/markets/maruti-suzuki-tata-motors-pv-other-auto-stocks-rise-up-to-3-amid-strong-october-sales-14066032.html',
-    'moneycontrol_sunpharma': 'https://www.moneycontrol.com/news/business/markets/sun-pharma-shares-fall-3-after-q2-profit-plunges-36-brokerages-bullish-but-slash-target-prices-14066346.html',
-    'moneycontrol_oil': 'https://www.moneycontrol.com/news/business/markets/oil-drops-6-as-iran-signals-openness-to-peace-talks-14066683.html',
-    'moneycontrol_ltcg': 'https://www.moneycontrol.com/news/business/markets/a-cut-in-equity-ltcg-tax-could-ease-foreign-outflows-and-support-the-rupee-says-jefferies-14066728.html',
+    # Section/index page (always fresh) instead of dated article URLs,
+    # so the scan never re-reads the same stale articles.
+    'moneycontrol_news': 'https://www.moneycontrol.com/news/business/markets/',
     'moneycontrol_banknifty': 'https://www.moneycontrol.com/indian-indices/nifty-bank-23.html',
     'moneycontrol_niftyit': 'https://www.moneycontrol.com/indian-indices/nifty-it-19.html',
     'yahoo_nifty': 'https://finance.yahoo.com/quote/%5ENSEI/',
@@ -539,61 +534,40 @@ Nifty 50 staged its **largest single-day gain in ~5 months (+{nifty_pct}%)**, cl
 1. **Moneycontrol — Markets Homepage** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Nifty {nifty_price}, Bank Nifty {bn_price}, FII/DII cash flows, top gainers/losers, long build-up list  
    `https://www.moneycontrol.com/markets/`
 
-2. **Moneycontrol — Technical View: Nifty stages strong bullish breakout** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Resistance 23,500–23,600, support 23,200, VIX {vix}, RSI 61, MACD bullish crossover  
-   `https://www.moneycontrol.com/news/business/markets/technical-view-nifty-stages-strong-bullish-breakout-targets-23-600-bank-nifty-must-defend-20-day-ema-to-sustain-uptrend-14066573.html`
+2. **Moneycontrol — Markets News section** (live index page, fetched fresh each run) — latest technical views, trade setups, and stock-specific market news  
+   `https://www.moneycontrol.com/news/business/markets/`
 
-3. **Moneycontrol — Trade Setup for November 3** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Pivot levels, OI data (Call 23,500 1.1Cr, Put 23,000 1.44Cr), PCR {pcr}, {long_buildup} long build-up stocks  
-   `https://www.moneycontrol.com/news/business/markets/trade-setup-for-november-3-top-15-things-to-know-before-the-opening-bell-14066771.html`
-
-4. **Moneycontrol — Reliance 12% Surge Signals Breakout** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Double-bottom breakout, targets ₹1,310–1,650, record Q2 PAT ₹29,550 Cr, volume highest since Sep-2020  
-   `https://www.moneycontrol.com/news/business/markets/reliance-s-12-surge-signals-breakout-can-the-stock-scale-a-new-peak-14066512.html`
-
-5. **Moneycontrol — Deven Choksey sets ₹1,800 target on Reliance** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — O2C margin tailwind, Jio stake value ₹700–800/share, GRM advantage from Venezuelan crude  
-   `https://www.moneycontrol.com/news/business/markets/deven-choksey-sets-rs-1-800-target-on-reliance-sees-scope-for-an-upgrade-14066454.html`
-
-6. **Moneycontrol — Maruti Suzuki, Tata Motors PV, other auto stocks rise up to 3%** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Oct sales: Maruti 2.76L (+25%), TVS +29%, Tata CV +27%, Ashok Leyland +23%; Jefferies/Emkay prefer 2W/CV  
-   `https://www.moneycontrol.com/news/business/markets/maruti-suzuki-tata-motors-pv-other-auto-stocks-rise-up-to-3-amid-strong-october-sales-14066032.html`
-
-7. **Moneycontrol — Sun Pharma shares fall 3% after Q2 profit plunges 36%** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — PAT ₹1,988 Cr (-36%), revenue +24% YoY; brokerage targets: Nirmal Bang ₹2,254, Nuvama ₹2,320, Emkay ₹2,000, Prabhudas ₹2,150, JM Fin ₹2,020  
-   `https://www.moneycontrol.com/news/business/markets/sun-pharma-shares-fall-3-after-q2-profit-plunges-36-brokerages-bullish-but-slash-target-prices-14066346.html`
-
-8. **Moneycontrol — Oil drops 6% as Iran signals openness to peace talks** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Brent ${brent} (-6%), WTI $97.75 (-6.1%); diplomatic talks reduce supply disruption risk  
-   `https://www.moneycontrol.com/news/business/markets/oil-drops-6-as-iran-signals-openness-to-peace-talks-14066683.html`
-
-9. **Moneycontrol — A cut in equity LTCG tax could ease foreign outflows** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Jefferies: 3 routes for tax rationalisation; positive for large-cap financials & rupee  
-   `https://www.moneycontrol.com/news/business/markets/a-cut-in-equity-ltcg-tax-could-ease-foreign-outflows-and-support-the-rupee-says-jefferies-14066728.html`
-
-10. **Moneycontrol — Bank Nifty Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — HDFC Bank +₹169 Cr, SBI +₹159 Cr, ICICI -₹116 Cr, Kotak -₹37 Cr, Axis -₹35 Cr; tech ratings per stock  
+3. **Moneycontrol — Bank Nifty Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — HDFC Bank +₹169 Cr, SBI +₹159 Cr, ICICI -₹116 Cr, Kotak -₹37 Cr, Axis -₹35 Cr; tech ratings per stock  
     `https://www.moneycontrol.com/indian-indices/nifty-bank-23.html`
 
-11. **Moneycontrol — Nifty IT Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Coforge +2.6% (Very Bullish), HCL Tech +0.4% (Very Bullish), Infosys -2.0% (Very Bullish but dragging), TCS flat  
+4. **Moneycontrol — Nifty IT Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Coforge +2.6% (Very Bullish), HCL Tech +0.4% (Very Bullish), Infosys -2.0% (Very Bullish but dragging), TCS flat  
     `https://www.moneycontrol.com/indian-indices/nifty-it-19.html`
 
-12. **Yahoo Finance — ^NSEI (Nifty 50)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nifty_price} ({nifty_pct}%), day range 23,207–23,441, 52W 22,180–26,373  
+5. **Yahoo Finance — ^NSEI (Nifty 50)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nifty_price} ({nifty_pct}%), day range 23,207–23,441, 52W 22,180–26,373  
     `https://finance.yahoo.com/quote/%5ENSEI/`
 
-13. **Yahoo Finance — ^NSEBANK (Bank Nifty)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {bn_price} ({bn_pct}%), day range 54,582–55,046, 52W 49,955–61,765  
+6. **Yahoo Finance — ^NSEBANK (Bank Nifty)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {bn_price} ({bn_pct}%), day range 54,582–55,046, 52W 49,955–61,765  
     `https://finance.yahoo.com/quote/%5ENSEBANK/`
 
-14. **Yahoo Finance — USDINR=X** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — {usdinr} ({usdinr_pct}%), day range 94.69–95.04, 52W 85.86–97.05  
+7. **Yahoo Finance — USDINR=X** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — {usdinr} ({usdinr_pct}%), day range 94.69–95.04, 52W 85.86–97.05  
     `https://finance.yahoo.com/quote/USDINR=X/`
 
-15. **Yahoo Finance — ^GSPC (S&P 500)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {sp500} ({sp500_pct}%), day range 7,539–7,662  
+8. **Yahoo Finance — ^GSPC (S&P 500)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {sp500} ({sp500_pct}%), day range 7,539–7,662  
     `https://finance.yahoo.com/quote/%5EGSPC/`
 
-16. **Yahoo Finance — ^DJI (Dow Jones)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {dow} ({dow_pct}%), day range 51,982–52,425  
+9. **Yahoo Finance — ^DJI (Dow Jones)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {dow} ({dow_pct}%), day range 51,982–52,425  
     `https://finance.yahoo.com/quote/%5EDJI/`
 
-17. **Yahoo Finance — ^IXIC (Nasdaq)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nasdaq} ({nasdaq_pct}%), day range 25,146–25,799  
+10. **Yahoo Finance — ^IXIC (Nasdaq)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nasdaq} ({nasdaq_pct}%), day range 25,146–25,799  
     `https://finance.yahoo.com/quote/%5EIXIC/`
 
-18. **Yahoo Finance — ^TNX (US 10Y Yield)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {us10y}% ({us10y_pct}%), day range 4.869–4.921%  
+11. **Yahoo Finance — ^TNX (US 10Y Yield)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {us10y}% ({us10y_pct}%), day range 4.869–4.921%  
     `https://finance.yahoo.com/quote/%5ETNX/`
 
-19. **Economic Times — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers: ITI +20%, Engineers India +15%, Affle +12%, Dixon +12%, Reliance +11.6%  
+12. **Economic Times — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers: ITI +20%, Engineers India +15%, Affle +12%, Dixon +12%, Reliance +11.6%  
     `https://economictimes.indiatimes.com/markets`
 
-20. **LiveMint — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers match ET; Gold ₹1,40,130 (+1.19%), Silver ₹1,83,810 (+2.61%); SIP inflows record ₹32,490 Cr  
+13. **LiveMint — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers match ET; Gold ₹1,40,130 (+1.19%), Silver ₹1,83,810 (+2.61%); SIP inflows record ₹32,490 Cr  
     `https://www.livemint.com/market`
 
 ---
@@ -614,8 +588,6 @@ def main():
     # Parse each source
     parsed = {}
     parsed['moneycontrol_markets'] = parse_moneycontrol_markets(raw_data.get('moneycontrol_markets'))
-    parsed['moneycontrol_technical'] = parse_technical_view(raw_data.get('moneycontrol_technical'))
-    parsed['moneycontrol_tradesetup'] = parse_trade_setup(raw_data.get('moneycontrol_tradesetup'))
     parsed['moneycontrol_banknifty'] = parse_banknifty_components(raw_data.get('moneycontrol_banknifty'))
     parsed['moneycontrol_niftyit'] = parse_niftyit_components(raw_data.get('moneycontrol_niftyit'))
     parsed['yahoo_nifty'] = parse_yahoo_quote(raw_data.get('yahoo_nifty'), 'NSEI')
@@ -625,11 +597,6 @@ def main():
     parsed['yahoo_dow'] = parse_yahoo_quote(raw_data.get('yahoo_dow'), 'DJI')
     parsed['yahoo_nasdaq'] = parse_yahoo_quote(raw_data.get('yahoo_nasdaq'), 'IXIC')
     parsed['yahoo_10y'] = parse_yahoo_quote(raw_data.get('yahoo_10y'), 'TNX')
-    parsed['moneycontrol_auto'] = parse_auto_sales(raw_data.get('moneycontrol_auto'))
-    parsed['moneycontrol_oil'] = parse_oil(raw_data.get('moneycontrol_oil'))
-    parsed['moneycontrol_reliance'] = parse_reliance(raw_data.get('moneycontrol_reliance'))
-    parsed['moneycontrol_choksey'] = parse_reliance(raw_data.get('moneycontrol_choksey'))
-    parsed['moneycontrol_sunpharma'] = parse_sunpharma(raw_data.get('moneycontrol_sunpharma'))
     parsed['et_markets'] = parse_et_livemint(raw_data.get('et_markets'))
     parsed['livemint_markets'] = parse_et_livemint(raw_data.get('livemint_markets'))
     
