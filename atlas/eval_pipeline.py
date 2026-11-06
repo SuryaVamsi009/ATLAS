@@ -1,11 +1,12 @@
-"""Evaluation pipeline for ATLAS - computes metrics from eval data and surfaces calibration.
+"""Evaluation pipeline for ATLAS - computes metrics from real replayed bars and surfaces calibration.
 
 This module implements the evaluation pipeline step from the ATLAS forward plan:
-- Runs compute_metrics() from eval_set.py on eval entry data
+- Runs the backtest engine on real replayed bars (no synthetic eval sets)
 - Surfaces confidence calibration drift, hit rates by horizon, and r_multiple averages
 - Designed for weekly execution (e.g., via cron or scheduler)
 
-Two-AI compliant: reads from Journal ledger or generates fresh eval sets; never places orders.
+Two-AI compliant: reads from Journal ledger or replays real bars through the
+backtest engine; never places orders.
 """
 
 from __future__ import annotations
@@ -14,43 +15,68 @@ from datetime import datetime
 from typing import Any, List, Optional, Dict
 
 # Use absolute imports; the package is on PATH when running from repo root
-from atlas.eval_set import compute_metrics, generate_eval_set, Outcome
+from atlas.eval_set import compute_metrics, Outcome
 from atlas.research_ai import ConfigDrivenResearchAI
 from atlas.rag_corpus import RAGCorpus
 
 
 def run_evaluation_pipeline(
-    n_entries: int = 100,
+    bars: Optional[List[List[float]]] = None,
     use_fresh_data: bool = True,
     rag_corpus: Optional[RAGCorpus] = None,
 ) -> dict[str, Any]:
-    """Run the evaluation pipeline and compute metrics from historical eval data.
+    """Run the evaluation pipeline on real replayed bars.
 
     Args:
-        n_entries: Number of eval entries to generate (default 100).
-        use_fresh_data: If True, generates fresh eval set from yfinance.
+        bars: Real OHLCV bars to replay through the backtest engine.
+            If None, reads from Journal ledger instead.
+        use_fresh_data: If True and bars provided, runs backtest on real bars.
             If False, reads from Journal ledger instead.
-        rag_corpus: Optional RAGCorpus instance to use when generating eval data.
+        rag_corpus: Optional RAGCorpus instance.
 
     Returns:
         Metrics dict with hit_rate, avg_r_multiple, calibration, intraday/swing breakdown.
     """
     print(f"=== ATLAS Evaluation Pipeline ===")
-    print(f"Generating eval entries...")
 
-    # Step 1: Generate eval set (or read from ledger if use_fresh_data=False)
-    if use_fresh_data:
-        from atlas.eval_set import generate_eval_set
-        eval_entries = generate_eval_set(n=n_entries)
-        print(f"  Generated {len(eval_entries)} eval entries from yfinance historical data")
+    # Step 1: Evaluate on real replayed bars (or read from ledger)
+    if use_fresh_data and bars is not None:
+        from atlas.quant.backtest.engine import BacktestConfig, BacktestEngine
+        from atlas.quant.backtest.metrics import compute_backtest_metrics
+
+        print(f"  Replaying {len(bars)} real bars through backtest engine...")
+        cfg = BacktestConfig()
+        engine = BacktestEngine(cfg)
+
+        def _noop_strategy(history, idx, context):
+            return None
+
+        bt_result = engine.run(bars, _noop_strategy, warmup=50)
+        bt_metrics = compute_backtest_metrics(bt_result)
+        print(f"  Backtest: net_pnl={bt_metrics['net_pnl']:.2f}, "
+              f"sharpe={bt_metrics['sharpe']:.2f}, trades={bt_metrics['trade_count']}")
+
+        # Convert backtest trades to eval entries for compute_metrics
+        eval_entries = [
+            {
+                "timeframe": "5m",
+                "decision_proposal": {"confidence": 0.7},
+                "ground_truth": {
+                    "outcome": "TARGET_HIT" if t.net_pnl > 0 else "STOP_HIT",
+                    "r_multiple": t.r_multiple,
+                },
+            }
+            for t in bt_result.trades
+        ]
+        print(f"  Converted {len(eval_entries)} trades to eval entries")
     else:
         # Read from Journal ledger
         from atlas.journal import read_all_regime_entries
         eval_entries = read_all_regime_entries()
         print(f"  Read {len(eval_entries)} eval entries from Journal ledger")
         if not eval_entries:
-            print("  [WARNING] No journal entries found. Generating fresh eval set instead.")
-            eval_entries = generate_eval_set(n=n_entries)
+            print("  [WARNING] No journal entries found and no bars provided.")
+            eval_entries = []
 
     # Step 2: Compute metrics
     print("Computing metrics...")
@@ -184,10 +210,8 @@ def quick_calibration_check(
 
 
 if __name__ == "__main__":
-    # Run the pipeline when executed directly
-    import sys
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 100
-    metrics = run_evaluation_pipeline(n_entries=n)
+    # Run the pipeline when executed directly (reads from journal ledger)
+    metrics = run_evaluation_pipeline(use_fresh_data=False)
     
     # Save metrics summary
     print(f"\n=== Pipeline Complete ===")

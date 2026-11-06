@@ -19,7 +19,7 @@ Two-AI Architecture:
 """
 
 from atlas.decision_proposal import DecisionProposal
-from atlas.eval_set import Outcome, grade_outcome, generate_eval_set, EvalEntry
+from atlas.eval_set import Outcome, grade_outcome, EvalEntry
 from atlas.risk_verdict import RiskVerdict, verify
 from atlas.research_ai import ResearchAI, ConfigDrivenResearchAI
 from atlas.rag_corpus import RAGCorpus
@@ -33,7 +33,6 @@ __all__ = [
     "DecisionProposal",
     "Outcome",
     "grade_outcome",
-    "generate_eval_set",
     "EvalEntry",
     "RiskVerdict",
     "verify",
