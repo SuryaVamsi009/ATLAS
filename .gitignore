@@ -61,3 +61,4 @@ market-scan/*.md
 !market-scan/.gitkeep
 bugs/
 
+coverage.xml
