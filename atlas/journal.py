@@ -204,7 +204,7 @@ def write_decision_proposal_entry(
         "decision_proposal": proposal_dict,
         "agent_action": "generate_decision_proposal",
         "risk_verdict": None,  # Filled in later by RiskVerdict
-        "order_result": None,  # Filled in later by KiteAdapter
+        "order_result": None,  # Filled in later by KiteAdapter (or remains None if no order)
         "pnl": None,  # Filled in later
     }
     _append_entry(entry)
@@ -241,6 +241,9 @@ def write_risk_verdict_entry(
                 else None,
                 "checks": risk_verdict.checks,
             }
+            # If trade is rejected, remove order_result key (no order will be placed)
+            if not risk_verdict.approved:
+                latest.pop("order_result", None)
             # Rewrite the file with updated entry
             _rewrite_ledger(entries)
     return proposal_entry_id

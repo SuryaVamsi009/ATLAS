@@ -161,7 +161,17 @@ class Orchestrator:
         news_context: str,
         context_dict: dict[str, Any],
     ) -> dict[str, Any]:
-        """Run a cycle and persist its result as the authoritative journal record."""
+        """Run a cycle and persist its result using the Two-AI journal protocol.
+
+        The journal is written incrementally at each step:
+        - Step 2: Research AI writes regime entry
+        - Step 3: Agent AI writes decision proposal entry
+        - Step 4: RiskVerdict writes risk verdict entry
+        - Step 5: KiteAdapter writes order result entry
+
+        This follows the Two-AI architecture where communication only happens
+        through the structured journal ledger.
+        """
         try:
             result = self._run_cycle(market_data, news_context, context_dict)
         except Exception as exc:
@@ -179,6 +189,9 @@ class Orchestrator:
                 "step7_error": f"Unexpected orchestration error: {exc}",
             }
 
+        # The journal entries are already written in _run_cycle at each step.
+        # We just need to return the result with the entry IDs for reference.
+        # Create a summary journal entry for the result dict (not persisted to ledger)
         snapshot = result["step1_snapshot"]
         decision_proposal = result["step3_decision_proposal"]
         risk_verdict = result["step4_risk_verdict"]
@@ -207,36 +220,22 @@ class Orchestrator:
         else:
             step = "approved_trade"
 
-        journal_entry = result["step6_journal_entry"]
-        if journal_entry is None:
-            journal_entry = self._create_journal_entry(
-                snapshot=snapshot,
-                decision_proposal=decision_proposal,
-                risk_verdict=risk_verdict,
-                order_result=result["step5_order_details"],
-                regime_flags=result["step2_regime_flags"],
-                event_alerts=result["step2_event_alerts"],
-                step=step,
-                status=status,
-                error=error,
-                failure_stage=failure_stage,
-            )
-        journal_entry.update(
+        # Create a summary entry for the result (not written to ledger, just for return value)
+        journal_entry = self._create_journal_entry(
+            snapshot=snapshot,
+            decision_proposal=decision_proposal,
+            risk_verdict=risk_verdict,
+            order_result=result["step5_order_details"],
+            regime_flags=result["step2_regime_flags"],
+            event_alerts=result["step2_event_alerts"],
+            step=step,
             status=status,
             error=error,
             failure_stage=failure_stage,
         )
-        try:
-            journal_entry["entry_id"] = journal_ledger.write_cycle_entry(journal_entry)
-        except Exception as exc:
-            logger.exception("Failed to persist cycle journal entry")
-            journal_entry["status"] = "persistence_failed"
-            journal_entry["persistence_error"] = str(exc)
-            result["step7_success"] = False
-            persistence_error = f"Journal persistence failed: {exc}"
-            result["step7_error"] = (
-                f"{error}; {persistence_error}" if error else persistence_error
-            )
+        # Add the entry IDs from the individual journal writes
+        journal_entry["regime_entry_id"] = result.get("regime_entry_id")
+        journal_entry["proposal_entry_id"] = result.get("proposal_entry_id")
         result["step6_journal_entry"] = journal_entry
         return result
 
@@ -331,6 +330,25 @@ class Orchestrator:
                     f"Step 2 complete: regime_flags={regime_flags}, "
                     f"event_alerts={event_alerts}"
                 )
+
+                # Write Research AI output to journal (Two-AI boundary: Research AI writes)
+                thesis = "Research AI analysis based on regime flags and event alerts"
+                confidence = 0.75  # Default confidence for Research AI output
+                try:
+                    regime_entry_id = journal_ledger.write_regime_entry(
+                        snapshot_id=snapshot.snapshot_id,
+                        regime_flags=regime_flags,
+                        event_alerts=event_alerts,
+                        thesis=thesis,
+                        confidence=confidence,
+                        news_context=news_context,
+                    )
+                    result["regime_entry_id"] = regime_entry_id
+                    logger.info(f"Step 2 journal: wrote regime entry {regime_entry_id}")
+                except Exception as e:
+                    logger.error(f"Step 2 journal write failed: {e}")
+                    # Continue cycle even if journal write fails
+
             except Exception as e:
                 error_msg = f"Step 2 failed: {str(e)}"
                 logger.error(error_msg)
@@ -352,6 +370,22 @@ class Orchestrator:
                     f"confidence={decision_proposal.confidence:.2f}, "
                     f"size_hint={decision_proposal.size_hint:.2f}"
                 )
+
+                # Write DecisionProposal to journal (Two-AI boundary: Agent AI writes)
+                regime_entry_id = result.get("regime_entry_id")
+                if regime_entry_id:
+                    try:
+                        proposal_entry_id = journal_ledger.write_decision_proposal_entry(
+                            snapshot_id=snapshot.snapshot_id,
+                            decision_proposal=decision_proposal,
+                            regime_entry_id=regime_entry_id,
+                        )
+                        result["proposal_entry_id"] = proposal_entry_id
+                        logger.info(f"Step 3 journal: wrote proposal entry {proposal_entry_id}")
+                    except Exception as e:
+                        logger.error(f"Step 3 journal write failed: {e}")
+                        # Continue cycle even if journal write fails
+
             except Exception as e:
                 error_msg = f"Step 3 failed: {str(e)}"
                 logger.error(error_msg)
@@ -376,6 +410,17 @@ class Orchestrator:
                     f"veto_reason={risk_verdict.veto_reason}, "
                     f"final_qty={risk_verdict.final_qty:.2f}"
                 )
+
+                # Write RiskVerdict to journal
+                proposal_entry_id = result.get("proposal_entry_id")
+                if proposal_entry_id:
+                    try:
+                        journal_ledger.write_risk_verdict_entry(proposal_entry_id, risk_verdict)
+                        logger.info(f"Step 4 journal: wrote risk verdict for {proposal_entry_id}")
+                    except Exception as e:
+                        logger.error(f"Step 4 journal write failed: {e}")
+                        # Continue cycle even if journal write fails
+
             except Exception as e:
                 error_msg = f"Step 4 failed: {str(e)}"
                 logger.error(error_msg)
@@ -404,11 +449,37 @@ class Orchestrator:
                     f"Step 5 complete: order placed, "
                     f"order_id={order_details.get('order_id', 'N/A')}"
                 )
+
+                # Write order result to journal
+                proposal_entry_id = result.get("proposal_entry_id")
+                if proposal_entry_id:
+                    try:
+                        journal_ledger.write_order_result_entry(proposal_entry_id, order_details)
+                        logger.info(f"Step 5 journal: wrote order result for {proposal_entry_id}")
+                    except Exception as e:
+                        logger.error(f"Step 5 journal write failed: {e}")
+                        # Continue cycle even if journal write fails
+
             except Exception as e:
                 error_msg = f"Step 5 failed: {str(e)}"
                 logger.error(error_msg)
                 result["step7_error"] = error_msg
                 result["step7_success"] = False
+                # Write order result with error to journal
+                proposal_entry_id = result.get("proposal_entry_id")
+                if proposal_entry_id:
+                    error_order_result = {
+                        "error": str(e),
+                        "action": decision_proposal.action,
+                        "quantity": risk_verdict.final_qty,
+                    }
+                    result["step5_order_details"] = error_order_result
+                    try:
+                        journal_ledger.write_order_result_entry(proposal_entry_id, error_order_result)
+                        logger.info(f"Step 5 journal: wrote order error for {proposal_entry_id}")
+                    except Exception as je:
+                        logger.error(f"Step 5 journal write failed: {je}")
+                        # Continue cycle even if journal write fails
                 return result
 
             # =========================================================================

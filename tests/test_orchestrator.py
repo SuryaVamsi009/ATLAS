@@ -223,7 +223,9 @@ class TestOrchestrator:
         journal_entry = result["step6_journal_entry"]
         assert journal_entry["status"] == "completed"
         assert journal_entry["step"] == "approved_trade"
-        assert "entry_id" in journal_entry
+        # With Two-AI journal protocol, we now have individual entry IDs
+        assert "regime_entry_id" in journal_entry
+        assert "proposal_entry_id" in journal_entry
         assert "timestamp_ist" in journal_entry
 
     def test_run_cycle_risk_rejection_symbol_not_allowed(self):

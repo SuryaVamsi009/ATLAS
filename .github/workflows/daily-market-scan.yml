@@ -45,7 +45,7 @@ jobs:
           if [ -z "$(git status --porcelain)" ]; then
             echo "No changes to commit"
           else
-            git add market-scan/
+            git add -f market-scan/
             git commit -m "chore: daily market scan $(date +%F) [skip ci]"
             git push
           fi
