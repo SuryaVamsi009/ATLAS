@@ -5,10 +5,10 @@ and metrics computation for evaluation on real replayed bars.
 """
 
 from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Grading logic – mechanically determine outcome from price bars
@@ -147,7 +147,7 @@ def compute_metrics(eval_results: list[dict[str, Any]]) -> dict[str, Any]:
     swing_r = 0.0
 
     # Confidence calibration: bin confidences into 0.1 buckets
-    bins: dict[tuple[int, int], dict[str, list[float]]] = {}
+    bins: dict[tuple[int, int], dict[str, Any]] = {}
     for result in eval_results:
         # Get confidence from the decision proposal
         proposal = result.get("decision_proposal") or result
