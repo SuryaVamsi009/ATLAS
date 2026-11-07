@@ -18,14 +18,14 @@ Two-AI Architecture:
 - Communication only through ledger/structured data
 """
 
-from atlas.decision_proposal import DecisionProposal
-from atlas.eval_set import Outcome, grade_outcome, generate_eval_set, EvalEntry
-from atlas.risk_verdict import RiskVerdict, verify
-from atlas.research_ai import ResearchAI, ConfigDrivenResearchAI
-from atlas.rag_corpus import RAGCorpus
-from atlas.state_snapshot import StateSnapshot, compute_from_bars
-from atlas.orchestrator import Orchestrator, OrchestratorConfig
 from atlas.brokers.kite_adapter import KiteAdapter
+from atlas.decision_proposal import DecisionProposal
+from atlas.eval_set import EvalEntry, Outcome, grade_outcome
+from atlas.orchestrator import Orchestrator, OrchestratorConfig
+from atlas.rag_corpus import RAGCorpus
+from atlas.research_ai import ConfigDrivenResearchAI, ResearchAI
+from atlas.risk_verdict import RiskVerdict, verify
+from atlas.state_snapshot import StateSnapshot, compute_from_bars
 
 __all__ = [
     "StateSnapshot",
@@ -33,7 +33,6 @@ __all__ = [
     "DecisionProposal",
     "Outcome",
     "grade_outcome",
-    "generate_eval_set",
     "EvalEntry",
     "RiskVerdict",
     "verify",

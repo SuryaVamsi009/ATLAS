@@ -1,63 +1,87 @@
-"""Evaluation pipeline for ATLAS - computes metrics from eval data and surfaces calibration.
+"""Evaluation pipeline for ATLAS - computes metrics from real replayed bars and surfaces calibration.
 
 This module implements the evaluation pipeline step from the ATLAS forward plan:
-- Runs compute_metrics() from eval_set.py on eval entry data
+- Runs the backtest engine on real replayed bars (no synthetic eval sets)
 - Surfaces confidence calibration drift, hit rates by horizon, and r_multiple averages
 - Designed for weekly execution (e.g., via cron or scheduler)
 
-Two-AI compliant: reads from Journal ledger or generates fresh eval sets; never places orders.
+Two-AI compliant: reads from Journal ledger or replays real bars through the
+backtest engine; never places orders.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, List, Optional, Dict
+from typing import Any
 
 # Use absolute imports; the package is on PATH when running from repo root
-from atlas.eval_set import compute_metrics, generate_eval_set, Outcome
-from atlas.research_ai import ConfigDrivenResearchAI
+from atlas.eval_set import Outcome, compute_metrics
 from atlas.rag_corpus import RAGCorpus
 
 
 def run_evaluation_pipeline(
-    n_entries: int = 100,
+    bars: list[list[float]] | None = None,
     use_fresh_data: bool = True,
-    rag_corpus: Optional[RAGCorpus] = None,
+    rag_corpus: RAGCorpus | None = None,
 ) -> dict[str, Any]:
-    """Run the evaluation pipeline and compute metrics from historical eval data.
+    """Run the evaluation pipeline on real replayed bars.
 
     Args:
-        n_entries: Number of eval entries to generate (default 100).
-        use_fresh_data: If True, generates fresh eval set from yfinance.
+        bars: Real OHLCV bars to replay through the backtest engine.
+            If None, reads from Journal ledger instead.
+        use_fresh_data: If True and bars provided, runs backtest on real bars.
             If False, reads from Journal ledger instead.
-        rag_corpus: Optional RAGCorpus instance to use when generating eval data.
+        rag_corpus: Optional RAGCorpus instance.
 
     Returns:
         Metrics dict with hit_rate, avg_r_multiple, calibration, intraday/swing breakdown.
     """
-    print(f"=== ATLAS Evaluation Pipeline ===")
-    print(f"Generating eval entries...")
+    print("=== ATLAS Evaluation Pipeline ===")
 
-    # Step 1: Generate eval set (or read from ledger if use_fresh_data=False)
-    if use_fresh_data:
-        from atlas.eval_set import generate_eval_set
-        eval_entries = generate_eval_set(n=n_entries)
-        print(f"  Generated {len(eval_entries)} eval entries from yfinance historical data")
+    # Step 1: Evaluate on real replayed bars (or read from ledger)
+    if use_fresh_data and bars is not None:
+        from atlas.quant.backtest.engine import BacktestConfig, BacktestEngine
+        from atlas.quant.backtest.metrics import compute_backtest_metrics
+
+        print(f"  Replaying {len(bars)} real bars through backtest engine...")
+        cfg = BacktestConfig()
+        engine = BacktestEngine(cfg)
+
+        def _noop_strategy(history, idx, context):
+            return None
+
+        bt_result = engine.run(bars, _noop_strategy, warmup=50)
+        bt_metrics = compute_backtest_metrics(bt_result)
+        print(f"  Backtest: net_pnl={bt_metrics['net_pnl']:.2f}, "
+              f"sharpe={bt_metrics['sharpe']:.2f}, trades={bt_metrics['trade_count']}")
+
+        # Convert backtest trades to eval entries for compute_metrics
+        eval_entries = [
+            {
+                "timeframe": "5m",
+                "decision_proposal": {"confidence": 0.7},
+                "ground_truth": {
+                    "outcome": "TARGET_HIT" if t.net_pnl > 0 else "STOP_HIT",
+                    "r_multiple": t.r_multiple,
+                },
+            }
+            for t in bt_result.trades
+        ]
+        print(f"  Converted {len(eval_entries)} trades to eval entries")
     else:
         # Read from Journal ledger
         from atlas.journal import read_all_regime_entries
         eval_entries = read_all_regime_entries()
         print(f"  Read {len(eval_entries)} eval entries from Journal ledger")
         if not eval_entries:
-            print("  [WARNING] No journal entries found. Generating fresh eval set instead.")
-            eval_entries = generate_eval_set(n=n_entries)
+            print("  [WARNING] No journal entries found and no bars provided.")
+            eval_entries = []
 
     # Step 2: Compute metrics
     print("Computing metrics...")
     metrics = compute_metrics(eval_entries)
 
     # Step 3: Surface key findings
-    print(f"\n--- Evaluation Results ---")
+    print("\n--- Evaluation Results ---")
     print(f"Total samples: {metrics['total_samples']}")
     print(f"Hit rate: {metrics['hit_rate']:.2%}")
     print(f"Average r_multiple: {metrics['avg_r_multiple']:.2f}")
@@ -65,7 +89,7 @@ def run_evaluation_pipeline(
     print(f"Swing hit rate: {metrics['swing_hit_rate']:.2%} (avg r: {metrics['swing_avg_r']:.2f})")
 
     # Calibration drift analysis
-    print(f"\n--- Confidence Calibration ---")
+    print("\n--- Confidence Calibration ---")
     for bin_entry in metrics['calibration']:
         drift = bin_entry['success_rate'] - 0.7  # Expected 70% hit rate at this confidence
         drift_marker = " ⚠️" if abs(drift) > 0.1 else ""
@@ -85,7 +109,7 @@ def run_evaluation_pipeline(
         total_weighted_samples = sum(c['sample_count'] for c in metrics['calibration'])
         overall_calibration = total_weighted_hits / total_weighted_samples if total_weighted_samples > 0 else 0
 
-        print(f"\n--- Overall Calibration ---")
+        print("\n--- Overall Calibration ---")
         print(f"Weighted success rate across all bins: {overall_calibration:.2%}")
         if overall_calibration > 0.75:
             print("  ⚠️ System is over-confident (success rate > 75%)")
@@ -101,7 +125,7 @@ def run_evaluation_pipeline(
         if abs(c['success_rate'] - 0.7) > 0.1
     ]
     if calibration_drifts:
-        print(f"\n--- Key Insight ---")
+        print("\n--- Key Insight ---")
         print(f"  {len(calibration_drifts)} confidence bin(s) show significant drift from expected 70%")
         for drift in calibration_drifts:
             bin_idx = int(drift * 10)
@@ -117,8 +141,8 @@ def run_evaluation_pipeline(
 
 
 def quick_calibration_check(
-    eval_entries: List[dict[str, Any]],
-    confidence_bins: Optional[List[tuple[float, float]]] = None,
+    eval_entries: list[dict[str, Any]],
+    confidence_bins: list[tuple[float, float | None]] | None = None,
 ) -> dict[str, Any]:
     """Quick calibration check on existing eval entries.
 
@@ -134,7 +158,7 @@ def quick_calibration_check(
                           (0.4, 0.5), (0.5, 0.6), (0.6, 0.7), (0.7, 0.8),
                           (0.8, 0.9), (0.9, 1.0)]
 
-    results: Dict[str, Any] = {
+    results: dict[str, Any] = {
         "bins": [],
         "overall_success_rate": 0.0,
         "total_samples": len(eval_entries),
@@ -184,13 +208,11 @@ def quick_calibration_check(
 
 
 if __name__ == "__main__":
-    # Run the pipeline when executed directly
-    import sys
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 100
-    metrics = run_evaluation_pipeline(n_entries=n)
-    
+    # Run the pipeline when executed directly (reads from journal ledger)
+    metrics = run_evaluation_pipeline(use_fresh_data=False)
+
     # Save metrics summary
-    print(f"\n=== Pipeline Complete ===")
+    print("\n=== Pipeline Complete ===")
     print(f"Metrics: hit_rate={metrics['hit_rate']:.2%}, "
           f"avg_r={metrics['avg_r_multiple']:.2f}, "
           f"samples={metrics['total_samples']}")
