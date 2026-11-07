@@ -35,7 +35,7 @@ def run_evaluation_pipeline(
     Returns:
         Metrics dict with hit_rate, avg_r_multiple, calibration, intraday/swing breakdown.
     """
-    print(f"=== ATLAS Evaluation Pipeline ===")
+    print("=== ATLAS Evaluation Pipeline ===")
 
     # Step 1: Evaluate on real replayed bars (or read from ledger)
     if use_fresh_data and bars is not None:
@@ -81,7 +81,7 @@ def run_evaluation_pipeline(
     metrics = compute_metrics(eval_entries)
 
     # Step 3: Surface key findings
-    print(f"\n--- Evaluation Results ---")
+    print("\n--- Evaluation Results ---")
     print(f"Total samples: {metrics['total_samples']}")
     print(f"Hit rate: {metrics['hit_rate']:.2%}")
     print(f"Average r_multiple: {metrics['avg_r_multiple']:.2f}")
@@ -89,7 +89,7 @@ def run_evaluation_pipeline(
     print(f"Swing hit rate: {metrics['swing_hit_rate']:.2%} (avg r: {metrics['swing_avg_r']:.2f})")
 
     # Calibration drift analysis
-    print(f"\n--- Confidence Calibration ---")
+    print("\n--- Confidence Calibration ---")
     for bin_entry in metrics['calibration']:
         drift = bin_entry['success_rate'] - 0.7  # Expected 70% hit rate at this confidence
         drift_marker = " ⚠️" if abs(drift) > 0.1 else ""
@@ -109,7 +109,7 @@ def run_evaluation_pipeline(
         total_weighted_samples = sum(c['sample_count'] for c in metrics['calibration'])
         overall_calibration = total_weighted_hits / total_weighted_samples if total_weighted_samples > 0 else 0
 
-        print(f"\n--- Overall Calibration ---")
+        print("\n--- Overall Calibration ---")
         print(f"Weighted success rate across all bins: {overall_calibration:.2%}")
         if overall_calibration > 0.75:
             print("  ⚠️ System is over-confident (success rate > 75%)")
@@ -125,7 +125,7 @@ def run_evaluation_pipeline(
         if abs(c['success_rate'] - 0.7) > 0.1
     ]
     if calibration_drifts:
-        print(f"\n--- Key Insight ---")
+        print("\n--- Key Insight ---")
         print(f"  {len(calibration_drifts)} confidence bin(s) show significant drift from expected 70%")
         for drift in calibration_drifts:
             bin_idx = int(drift * 10)
@@ -210,9 +210,9 @@ def quick_calibration_check(
 if __name__ == "__main__":
     # Run the pipeline when executed directly (reads from journal ledger)
     metrics = run_evaluation_pipeline(use_fresh_data=False)
-    
+
     # Save metrics summary
-    print(f"\n=== Pipeline Complete ===")
+    print("\n=== Pipeline Complete ===")
     print(f"Metrics: hit_rate={metrics['hit_rate']:.2%}, "
           f"avg_r={metrics['avg_r_multiple']:.2f}, "
           f"samples={metrics['total_samples']}")

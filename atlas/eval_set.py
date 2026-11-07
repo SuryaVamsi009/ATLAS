@@ -6,8 +6,8 @@ and metrics computation for evaluation on real replayed bars.
 
 from __future__ import annotations
 
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from typing import Any
 
 

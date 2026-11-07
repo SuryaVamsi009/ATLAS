@@ -7,9 +7,9 @@ clock and data feed. Produces a complete trade log and equity curve.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from atlas.quant.backtest.costs import CostModel, IndianCostConfig

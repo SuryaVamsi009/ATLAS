@@ -11,8 +11,9 @@ Implements:
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List
+from typing import Any
 
 from atlas.quant.backtest.costs import IndianCostConfig
 from atlas.quant.backtest.engine import BacktestConfig, BacktestEngine
@@ -89,13 +90,13 @@ def probability_of_sharpe(
 
     Uses the deflated Sharpe framework: P(SR_true > 0 | SR_obs, n_trials).
     """
+    from math import erf
+
     if n_trials <= 1:
         # Single trial: standard normal CDF
-        from math import erf, sqrt
         return 0.5 * (1.0 + erf(sharpe * math.sqrt(n_observations) / math.sqrt(2.0)))
 
     dsr = deflated_sharpe(sharpe, n_trials, n_observations=n_observations)
-    from math import erf, sqrt
     # Probability that deflated Sharpe > 0
     return 0.5 * (1.0 + erf(dsr * math.sqrt(n_observations) / math.sqrt(2.0)))
 
