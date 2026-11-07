@@ -129,7 +129,7 @@ class BacktestEngine:
     def run(
         self,
         bars: list[list[float]],
-        strategy_fn: Callable[[list[list[float]], int, dict[str, Any]], dict[str, Any | None]],
+        strategy_fn: Callable[[list[list[float]], int, dict[str, Any]], dict[str, Any] | None],
         warmup: int = 50,
     ) -> BacktestResult:
         """Run the backtest over a series of bars.

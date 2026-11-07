@@ -24,7 +24,7 @@ class BuyAndHoldBaseline:
         """Return a strategy callback for BacktestEngine.run()."""
         entered = {"done": False}
 
-        def strategy_fn(history: list[list[float]], idx: int, context: dict[str, Any]) -> dict[str, Any | None]:
+        def strategy_fn(history: list[list[float]], idx: int, context: dict[str, Any]) -> dict[str, Any] | None:
             if entered["done"]:
                 return None
             # Buy with all available cash at the first tradeable bar
@@ -69,7 +69,7 @@ class RandomEntryBaseline:
         """Return a strategy callback for BacktestEngine.run()."""
         state = {"entry_bar": -1, "side": None}
 
-        def strategy_fn(history: list[list[float]], idx: int, context: dict[str, Any]) -> dict[str, Any | None]:
+        def strategy_fn(history: list[list[float]], idx: int, context: dict[str, Any]) -> dict[str, Any] | None:
             # If in a position, exit after hold_bars
             if state["entry_bar"] >= 0:
                 if idx - state["entry_bar"] >= self.hold_bars:
