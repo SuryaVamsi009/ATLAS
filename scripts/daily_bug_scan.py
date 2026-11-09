@@ -60,7 +60,10 @@ class BugScanner:
         
         # Layer 6: Journal/Eval
         self._scan_layer6_journal_eval()
-        
+
+        # Layer 7: Evaluation infrastructure (universe, call_registry, eval_set v2)
+        self._scan_layer7_eval_infra()
+
         # Cross-cutting: Config & Tests
         self._scan_config_tests_impl()
         
@@ -82,7 +85,7 @@ class BugScanner:
             
             # Non-package imports (from module import vs from atlas.module import)
             if re.match(r'^from\s+(?!atlas\.)\w+\s+import', stripped) and not stripped.startswith('#'):
-                if 'atlas' in str(file_path) and not any(x in stripped for x in ['typing', 'datetime', 'dataclasses', 'enum', 'functools', 'collections', 'pathlib', 'json', 'logging', 'zoneinfo']):
+                if 'atlas' in str(file_path) and not any(x in stripped for x in ['__future__', 'typing', 'datetime', 'dataclasses', 'enum', 'functools', 'collections', 'pathlib', 'json', 'logging', 'zoneinfo', 'csv', 'os', 're', 'sys', 'math', 'itertools', 'urllib', 'abc', 'copy', 'hashlib', 'uuid', 'random', 'statistics', 'textwrap', 'string', 'time', 'warnings', 'contextlib', 'operator', 'heapq', 'bisect', 'array', 'struct', 'base64', 'hmac', 'secrets', 'subprocess', 'shutil', 'tempfile', 'glob', 'fnmatch', 'inspect', 'traceback', 'pprint', 'reprlib', 'types', 'weakref', 'numbers', 'decimal', 'fractions', 'cmath']):
                     self._add_bug(BugReport(
                         title=f"Non-package import in {file_path.name}:{i}",
                         body=f"Found non-package import in `{file_path.relative_to(self.repo_root)}` line {i}:\n```python\n{line}\n```\n\n**Fix**: Change to package import `from atlas.module import ...`",
@@ -648,6 +651,107 @@ class BugScanner:
                     self._scan_journal(file_path, "L6")
                 if file_path.name == "eval_set.py":
                     self._scan_eval_metrics(file_path, "L6")
+
+    def _scan_layer7_eval_infra(self):
+        """Scan L7: Evaluation infrastructure (universe, call_registry, eval_set v2)."""
+        print("  🧪 Scanning Layer 7: Eval Infrastructure...")
+        for name in ["universe.py", "call_registry.py", "eval_set.py"]:
+            file_path = self.atlas_root / name
+            if file_path.exists():
+                self._scan_imports(file_path, "L7")
+                self._scan_timezone(file_path, "L7")
+                self._scan_eval_infra(file_path, "L7")
+
+    def _scan_eval_infra(self, file_path: Path, layer: str):
+        """Detect eval-infra bugs: mutation functions in registry, hardcoded thresholds, synthetic data."""
+        content = file_path.read_text()
+        lines = content.split('\n')
+        rel = str(file_path.relative_to(self.repo_root))
+
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+
+            # Call registry must be append-only: no update/edit/delete functions
+            if file_path.name == "call_registry.py":
+                if re.match(r'^def\s+(update|edit|delete|remove|modify)_', stripped):
+                    self._add_bug(BugReport(
+                        title=f"Call registry has mutation function in {file_path.name}:{i}",
+                        body=f"`call_registry.py` defines a mutation function at line {i}:\n```python\n{line}\n```\n\nThe call registry is append-only by design. Registered calls are immutable.\n\n**Fix**: Remove the mutation function; corrections require a new call entry.",
+                        labels=["bug", "call_registry", "immutability", f"layer-{layer}"],
+                        assignees=["SuryaVamsi009"],
+                        layer=layer,
+                        bug_class="call_registry",
+                        severity="critical",
+                        file_path=rel,
+                        line_numbers=[i],
+                        evidence=line,
+                        suggested_fix="Remove mutation function; registry is append-only"
+                    ))
+                # os.replace on the registry file would overwrite it
+                if 'os.replace' in stripped:
+                    self._add_bug(BugReport(
+                        title=f"os.replace on call registry in {file_path.name}:{i} (overwrites append-only file)",
+                        body=f"`call_registry.py` uses `os.replace` at line {i}:\n```python\n{line}\n```\n\n`os.replace` overwrites the target file, destroying the append-only ledger.\n\n**Fix**: Open in append mode ('a') and fsync instead of os.replace.",
+                        labels=["bug", "call_registry", "atomicity", f"layer-{layer}"],
+                        assignees=["SuryaVamsi009"],
+                        layer=layer,
+                        bug_class="call_registry",
+                        severity="critical",
+                        file_path=rel,
+                        line_numbers=[i],
+                        evidence=line,
+                        suggested_fix="Use append mode + fsync, not os.replace"
+                    ))
+
+            # eval_set v2: no synthetic data generation, no hardcoded expected rates
+            if file_path.name == "eval_set.py":
+                if re.search(r'def\s+generate_eval_set', stripped):
+                    self._add_bug(BugReport(
+                        title=f"Synthetic generate_eval_set still present in {file_path.name}:{i}",
+                        body=f"`eval_set.py` still defines `generate_eval_set` at line {i}. Synthetic eval sets were replaced by registered-call evaluation (see ADR-0001).\n\n**Fix**: Remove generate_eval_set; use build_eval_set() with registered calls and real bars.",
+                        labels=["bug", "eval_set", "synthetic-data", f"layer-{layer}"],
+                        assignees=["SuryaVamsi009"],
+                        layer=layer,
+                        bug_class="eval_metrics",
+                        severity="critical",
+                        file_path=rel,
+                        line_numbers=[i],
+                        evidence=line,
+                        suggested_fix="Remove generate_eval_set; use build_eval_set()"
+                    ))
+                if re.search(r'0\.70|70\s*%|expected.*70', stripped) and 'hit' in content.lower():
+                    self._add_bug(BugReport(
+                        title=f"Hardcoded 70% expectation in {file_path.name}:{i}",
+                        body=f"`eval_set.py` line {i} contains a hardcoded 70% expectation:\n```python\n{line}\n```\n\nEvaluation must report observed rates only; no hardcoded thresholds (ADR-0001).\n\n**Fix**: Remove hardcoded expectation; print observed calibration rates.",
+                        labels=["bug", "eval_set", "hardcoded-threshold", f"layer-{layer}"],
+                        assignees=["SuryaVamsi009"],
+                        layer=layer,
+                        bug_class="eval_metrics",
+                        severity="high",
+                        file_path=rel,
+                        line_numbers=[i],
+                        evidence=line,
+                        suggested_fix="Report observed rates only, no hardcoded thresholds"
+                    ))
+
+            # universe: unverified hardcoded URLs are a risk
+            if file_path.name == "universe.py":
+                if 'http' in stripped and 'nseindia' in stripped and stripped.startswith(('"', "'", 'NSE_', 'URL')):
+                    if 'UNVERIFIED' not in content and 'TODO' not in content:
+                        self._add_bug(BugReport(
+                            title=f"Unverified NSE URL in {file_path.name}:{i} without marker",
+                            body=f"`universe.py` line {i} contains an NSE URL that is not marked as unverified:\n```python\n{line}\n```\n\n**Fix**: Add a comment noting the URL needs manual verification, or verify it now.",
+                            labels=["bug", "universe", "data-source", f"layer-{layer}"],
+                            assignees=["SuryaVamsi009"],
+                            layer=layer,
+                            bug_class="universe",
+                            severity="medium",
+                            file_path=rel,
+                            line_numbers=[i],
+                            evidence=line,
+                            suggested_fix="Mark URL as UNVERIFIED or verify against nseindia.com"
+                        ))
+
     
     def _scan_config_tests_impl(self):
         """Scan config and test gaps."""
