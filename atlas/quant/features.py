@@ -17,6 +17,7 @@ import pandas as pd
 # Helper functions
 # ---------------------------------------------------------------------------
 
+
 def _extract_closes(bars: list[list[float]]) -> np.ndarray:
     """Extract close prices from bars."""
     return np.array([bar[4] for bar in bars], dtype=np.float64)
@@ -53,6 +54,7 @@ def _extract_typical_price(bars: list[list[float]]) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # RSI (Relative Strength Index)
 # ---------------------------------------------------------------------------
+
 
 def rsi(bars: list[list[float]], period: int = 14) -> np.ndarray:
     """Calculate Relative Strength Index (RSI).
@@ -103,6 +105,7 @@ def rsi(bars: list[list[float]], period: int = 14) -> np.ndarray:
 # EMA (Exponential Moving Average)
 # ---------------------------------------------------------------------------
 
+
 def ema(bars: list[list[float]], period: int = 20, price_type: str = "close") -> np.ndarray:
     """Calculate Exponential Moving Average (EMA).
 
@@ -148,6 +151,7 @@ def ema(bars: list[list[float]], period: int = 20, price_type: str = "close") ->
 # ATR (Average True Range)
 # ---------------------------------------------------------------------------
 
+
 def atr(bars: list[list[float]], period: int = 14) -> np.ndarray:
     """Calculate Average True Range (ATR).
 
@@ -179,7 +183,7 @@ def atr(bars: list[list[float]], period: int = 14) -> np.ndarray:
     atr_values = np.full(len(bars), np.nan)
 
     # First ATR is simple average of first `period` TR values
-    atr_values[period] = np.mean(tr[1:period + 1])
+    atr_values[period] = np.mean(tr[1 : period + 1])
 
     # Wilder's smoothing
     for i in range(period + 1, len(bars)):
@@ -191,6 +195,7 @@ def atr(bars: list[list[float]], period: int = 14) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # VWAP (Volume Weighted Average Price)
 # ---------------------------------------------------------------------------
+
 
 def vwap(bars: list[list[float]], anchor: int | None = None) -> np.ndarray:
     """Calculate Volume Weighted Average Price (VWAP).
@@ -213,11 +218,11 @@ def vwap(bars: list[list[float]], anchor: int | None = None) -> np.ndarray:
 
     if anchor is not None and 0 <= anchor < len(bars):
         # Anchored VWAP from anchor point
-        cum_pv = 0.0
-        cum_vol = 0.0
+        cum_pv: float = 0.0
+        cum_vol: float = 0.0
         for i in range(anchor, len(bars)):
-            cum_pv += typical_prices[i] * volumes[i]
-            cum_vol += volumes[i]
+            cum_pv += float(typical_prices[i]) * float(volumes[i])
+            cum_vol += float(volumes[i])
             if cum_vol > 0:
                 vwap_values[i] = cum_pv / cum_vol
     else:
@@ -245,6 +250,7 @@ def session_vwap(bars: list[list[float]], session_start_idx: int = 0) -> np.ndar
 # ---------------------------------------------------------------------------
 # Opening Range
 # ---------------------------------------------------------------------------
+
 
 def opening_range(
     bars: list[list[float]],
@@ -328,6 +334,7 @@ def opening_range_breakout(
 # Gap Detection
 # ---------------------------------------------------------------------------
 
+
 def gap(bars: list[list[float]], prev_close: float | None = None) -> tuple[float, str]:
     """Calculate gap from previous close to current open.
 
@@ -383,6 +390,7 @@ def overnight_gap(bars: list[list[float]], prev_day_close: float) -> tuple[float
 # Additional Features
 # ---------------------------------------------------------------------------
 
+
 def sma(bars: list[list[float]], period: int = 20, price_type: str = "close") -> np.ndarray:
     """Simple Moving Average."""
     if len(bars) < period:
@@ -403,7 +411,7 @@ def sma(bars: list[list[float]], period: int = 20, price_type: str = "close") ->
 
     sma_values = np.full(len(bars), np.nan)
     for i in range(period - 1, len(bars)):
-        sma_values[i] = np.mean(prices[i - period + 1:i + 1])
+        sma_values[i] = np.mean(prices[i - period + 1 : i + 1])
 
     return sma_values
 
@@ -426,7 +434,7 @@ def bollinger_bands(
         prices = _extract_closes(bars)
 
     for i in range(period - 1, len(bars)):
-        std[i] = np.std(prices[i - period + 1:i + 1])
+        std[i] = np.std(prices[i - period + 1 : i + 1])
 
     upper = middle + num_std * std
     lower = middle - num_std * std
@@ -452,7 +460,7 @@ def macd(
     if valid_start < len(bars):
         # First signal is SMA of first `signal_period` MACD values
         first_valid = max(fast_period, slow_period) - 1
-        signal_line[valid_start] = np.mean(macd_line[first_valid:valid_start + 1])
+        signal_line[valid_start] = np.mean(macd_line[first_valid : valid_start + 1])
 
         alpha = 2.0 / (signal_period + 1.0)
         for i in range(valid_start + 1, len(bars)):
@@ -480,8 +488,8 @@ def stochastic(
     k_values = np.full(len(bars), np.nan)
 
     for i in range(k_period - 1, len(bars)):
-        highest_high = np.max(highs[i - k_period + 1:i + 1])
-        lowest_low = np.min(lows[i - k_period + 1:i + 1])
+        highest_high = np.max(highs[i - k_period + 1 : i + 1])
+        lowest_low = np.min(lows[i - k_period + 1 : i + 1])
 
         if highest_high != lowest_low:
             k_values[i] = 100.0 * (closes[i] - lowest_low) / (highest_high - lowest_low)
@@ -491,7 +499,7 @@ def stochastic(
     # %D is SMA of %K
     d_values = np.full(len(bars), np.nan)
     for i in range(k_period - 1 + d_period - 1, len(bars)):
-        d_values[i] = np.mean(k_values[i - d_period + 1:i + 1])
+        d_values[i] = np.mean(k_values[i - d_period + 1 : i + 1])
 
     return k_values, d_values
 
@@ -499,6 +507,7 @@ def stochastic(
 # ---------------------------------------------------------------------------
 # Compute all features at once (for StateSnapshot)
 # ---------------------------------------------------------------------------
+
 
 def compute_all_features(bars: list[list[float]]) -> dict:
     """Compute all technical features for a bar series.
