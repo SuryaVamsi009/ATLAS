@@ -11,7 +11,7 @@ import abc
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 import yfinance as yf
@@ -38,7 +38,7 @@ class DataLoader(abc.ABC):
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Load historical OHLCV bars.
 
         Args:
@@ -53,7 +53,7 @@ class DataLoader(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_available_symbols(self) -> List[str]:
+    def get_available_symbols(self) -> list[str]:
         """Get list of available symbols from this data source."""
         raise NotImplementedError
 
@@ -97,7 +97,7 @@ class YFinanceLoader(DataLoader):
         "1mo": 7300,
     }
 
-    def __init__(self, cache_dir: Optional[str] = None):
+    def __init__(self, cache_dir: str | None = None):
         """Initialize the YFinance loader.
 
         Args:
@@ -113,7 +113,7 @@ class YFinanceLoader(DataLoader):
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Load historical OHLCV bars from yfinance.
 
         Args:
@@ -188,7 +188,7 @@ class YFinanceLoader(DataLoader):
             print(f"Error fetching data for {symbol} {timeframe}: {e}")
             return []
 
-    def get_available_symbols(self) -> List[str]:
+    def get_available_symbols(self) -> list[str]:
         """Get list of available symbols (Nifty 50 components + index)."""
         # Nifty 50 symbols with .NS suffix for yfinance
         nifty50 = [
@@ -217,7 +217,7 @@ class YFinanceLoader(DataLoader):
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> Optional[List[List[float]]]:
+    ) -> list[list[float]] | None:
         """Load bars from cache if available and covers the requested range."""
         if not self.cache_dir:
             return None
@@ -246,7 +246,7 @@ class YFinanceLoader(DataLoader):
         except Exception:
             return None
 
-    def _save_to_cache(self, symbol: str, timeframe: str, bars: List[List[float]]) -> None:
+    def _save_to_cache(self, symbol: str, timeframe: str, bars: list[list[float]]) -> None:
         """Save bars to cache as parquet."""
         if not self.cache_dir or not bars:
             return
@@ -278,7 +278,7 @@ class ParquetCollector:
     def __init__(
         self,
         output_dir: str,
-        symbols: Optional[List[str]] = None,
+        symbols: list[str] | None = None,
         timeframe: str = "1m",
     ):
         """Initialize the collector.
@@ -308,7 +308,7 @@ class ParquetCollector:
         start: datetime,
         end: datetime,
         incremental: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Collect 1-minute bars for all symbols and write partitioned parquet.
 
         Args:
@@ -356,9 +356,9 @@ class ParquetCollector:
 
     def _validate_and_clean_bars(
         self,
-        bars: List[List[float]],
+        bars: list[list[float]],
         symbol: str,
-    ) -> Tuple[List[List[float]], Dict[str, int]]:
+    ) -> tuple[list[list[float]], dict[str, int]]:
         """Validate bars for gaps, duplicates, and timezone issues.
 
         Args:
@@ -415,7 +415,7 @@ class ParquetCollector:
     def _write_partitioned_parquet(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         incremental: bool,
     ) -> int:
         """Write bars to partitioned parquet files by date.
@@ -475,7 +475,7 @@ class ParquetCollector:
         self,
         symbol: str,
         date: str,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Read bars for a specific symbol and date from partitioned parquet.
 
         Args:
@@ -502,7 +502,7 @@ class ParquetCollector:
         symbol: str,
         start: datetime,
         end: datetime,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Read bars for a symbol across a date range.
 
         Args:
@@ -540,8 +540,8 @@ def load_bars(
     timeframe: str,
     start: datetime,
     end: datetime,
-    cache_dir: Optional[str] = None,
-) -> List[List[float]]:
+    cache_dir: str | None = None,
+) -> list[list[float]]:
     """Convenience function to load bars using YFinanceLoader.
 
     Args:

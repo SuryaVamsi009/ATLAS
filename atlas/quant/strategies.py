@@ -9,14 +9,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
 from atlas.quant.features import (
-    rsi, atr, vwap, opening_range,
+    atr,
+    opening_range,
+    rsi,
+    vwap,
 )
-
 
 # ---------------------------------------------------------------------------
 # Signal and Direction Types
@@ -54,9 +56,9 @@ class Signal:
     conviction: float
     horizon: Horizon
     stop_distance: float
-    entry_price: Optional[float] = None
-    target_price: Optional[float] = None
-    metadata: Optional[Dict[str, Any]] = None
+    entry_price: float | None = None
+    target_price: float | None = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         """Validate signal parameters."""
@@ -65,7 +67,7 @@ class Signal:
         if self.stop_distance <= 0:
             raise ValueError(f"Stop distance must be positive, got {self.stop_distance}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "symbol": self.symbol,
@@ -106,15 +108,15 @@ class Strategy(ABC):
         self.name = name
         self.min_conviction = min_conviction
         self.max_positions = max_positions
-        self.active_signals: Dict[str, Signal] = {}
+        self.active_signals: dict[str, Signal] = {}
 
     @abstractmethod
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-    ) -> Optional[Signal]:
+    ) -> Signal | None:
         """Generate a trading signal for the given symbol and bars.
 
         Args:
@@ -130,7 +132,7 @@ class Strategy(ABC):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         """Determine if current position should be exited.
@@ -186,9 +188,9 @@ class ORBStrategy(Strategy):
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-    ) -> Optional[Signal]:
+    ) -> Signal | None:
         if len(bars) < self.range_minutes + 5:
             return None
 
@@ -273,7 +275,7 @@ class ORBStrategy(Strategy):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         # Force flat before market close (15:15 IST)
@@ -324,9 +326,9 @@ class VWAPReversionStrategy(Strategy):
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-    ) -> Optional[Signal]:
+    ) -> Signal | None:
         if len(bars) < max(self.atr_period, self.rsi_period) + 10:
             return None
 
@@ -408,7 +410,7 @@ class VWAPReversionStrategy(Strategy):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         # Exit when price reaches VWAP (mean reversion target)
@@ -469,10 +471,10 @@ class GapFadeStrategy(Strategy):
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-        prev_day_close: Optional[float] = None,
-    ) -> Optional[Signal]:
+        prev_day_close: float | None = None,
+    ) -> Signal | None:
         if len(bars) < self.lookback_bars:
             return None
 
@@ -565,7 +567,7 @@ class GapFadeStrategy(Strategy):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         # Exit on gap fill (price reaches previous close)
@@ -612,10 +614,9 @@ def get_strategy(name: str, **kwargs) -> Strategy:
     return STRATEGY_REGISTRY[name](**kwargs)
 
 
-def list_strategies() -> List[str]:
+def list_strategies() -> list[str]:
     """List available strategy names."""
     return list(STRATEGY_REGISTRY.keys())
 
 
 # Type hint for bars
-from typing import List

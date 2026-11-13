@@ -7,15 +7,15 @@ Outputs: market-scan/YYYY-MM-DD-gitcop-neo-market-scan.md
 """
 
 import os
-import sys
 import re
-import json
+import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
-from bs4 import BeautifulSoup
+
 import pytz
+from bs4 import BeautifulSoup
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────
 IST = pytz.timezone('Asia/Kolkata')
@@ -99,7 +99,7 @@ def parse_moneycontrol_markets(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {}
     # Nifty, Sensex, Bank Nifty, Nifty IT, Nifty Auto
     patterns = {
@@ -113,18 +113,18 @@ def parse_moneycontrol_markets(html):
         m = re.search(pat, text)
         if m:
             out[k] = {'price': m.group(1).replace(',', ''), 'change': m.group(2), 'pct': m.group(3)}
-    
+
     # FII/DII Cash
     fii_match = re.search(r'Date\s+Net FII\s+Net DII\s+\d{4}-\d{2}-\d{2}\s+([\d,]+\.?\d*)\s+([-\d,]+\.?\d*)', text)
     if fii_match:
         out['fii_cash'] = fii_match.group(1).replace(',', '')
         out['dii_cash'] = fii_match.group(2).replace(',', '')
-    
+
     # FII Equity (SEBI)
     fii_eq = re.search(r'Equity \(Net\)\s+Debt \(Net\)\s+\d{4}-\d{2}-\d{2}\s+([-\d,]+\.?\d*)\s+([-\d,]+\.?\d*)', text)
     if fii_eq:
         out['fii_equity_latest'] = fii_eq.group(1).replace(',', '')
-    
+
     return out
 
 def parse_yahoo_quote(html, symbol):
@@ -133,7 +133,7 @@ def parse_yahoo_quote(html, symbol):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     # Price pattern: "23,440.80 +387.70 (+1.68%)"
     m = re.search(r'(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s+([+-]\d+(?:\.\d+)?)\s+\(([+-]\d+(?:\.\d+)?)%\)', text)
     if m:
@@ -150,14 +150,14 @@ def parse_technical_view(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {}
     # VIX
     vix = re.search(r'India VIX.*?(\d+(?:\.\d+)?).*?(\d+(?:\.\d+)?)%', text)
     if vix:
         out['vix'] = vix.group(1)
         out['vix_change_pct'] = vix.group(2)
-    
+
     # Resistance/Support
     res = re.search(r'resistance around (\d{1,3}(?:,\d{3})*(?:\.\d+)?)', text, re.IGNORECASE)
     if res:
@@ -165,12 +165,12 @@ def parse_technical_view(html):
     sup = re.search(r'support.*?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)', text, re.IGNORECASE)
     if sup:
         out['support'] = sup.group(1).replace(',', '')
-    
+
     # RSI
     rsi = re.search(r'RSI.*?(\d+(?:\.\d+)?)', text, re.IGNORECASE)
     if rsi:
         out['rsi'] = rsi.group(1)
-    
+
     return out
 
 def parse_trade_setup(html):
@@ -179,34 +179,34 @@ def parse_trade_setup(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {}
     # PCR
     pcr = re.search(r'Put-Call ratio.*?(\d+(?:\.\d+)?)', text, re.IGNORECASE)
     if pcr:
         out['pcr'] = pcr.group(1)
-    
+
     # Long build-up count
     lb = re.search(r'Long Build-up.*?(\d+)\s+Stocks', text, re.IGNORECASE)
     if lb:
         out['long_buildup'] = lb.group(1)
-    
+
     # Long unwinding
     lu = re.search(r'Long Unwinding.*?(\d+)\s+Stocks', text, re.IGNORECASE)
     if lu:
         out['long_unwinding'] = lu.group(1)
-    
+
     # OI data
     call_oi = re.search(r'maximum Call open interest was seen at the (\d{1,3}(?:,\d{3})*) strike.*?(\d+(?:\.\d+)?) crore', text, re.IGNORECASE)
     if call_oi:
         out['max_call_strike'] = call_oi.group(1).replace(',', '')
         out['max_call_oi'] = call_oi.group(2)
-    
+
     put_oi = re.search(r'maximum Put open interest.*?(\d{1,3}(?:,\d{3})*) strike.*?(\d+(?:\.\d+)?) crore', text, re.IGNORECASE)
     if put_oi:
         out['max_put_strike'] = put_oi.group(1).replace(',', '')
         out['max_put_oi'] = put_oi.group(2)
-    
+
     return out
 
 def parse_banknifty_components(html):
@@ -215,23 +215,23 @@ def parse_banknifty_components(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {'contributors_up': [], 'contributors_down': []}
-    
+
     # Up contributors
     up_section = re.search(r'Stocks pulling Indices UP(.*?)Stocks dragging Indices DOWN', text, re.DOTALL)
     if up_section:
         rows = re.findall(r'\[(.*?)\]\(.*?\)\s+([\d,]+\.?\d*)\s+([\d,]+\.?\d*)', up_section.group(1))
         for name, cmp, contrib in rows[:5]:
             out['contributors_up'].append({'name': name, 'cmp': cmp.replace(',', ''), 'contribution': contrib.replace(',', '')})
-    
+
     # Down contributors
     down_section = re.search(r'Stocks dragging Indices DOWN(.*?)(?:##|$)', text, re.DOTALL)
     if down_section:
         rows = re.findall(r'\[(.*?)\]\(.*?\)\s+([\d,]+\.?\d*)\s+([-\d,]+\.?\d*)', down_section.group(1))
         for name, cmp, contrib in rows[:5]:
             out['contributors_down'].append({'name': name, 'cmp': cmp.replace(',', ''), 'contribution': contrib.replace(',', '')})
-    
+
     return out
 
 def parse_niftyit_components(html):
@@ -240,21 +240,21 @@ def parse_niftyit_components(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {'up': [], 'down': []}
-    
+
     up_section = re.search(r'Stocks pulling Indices UP(.*?)Stocks dragging Indices DOWN', text, re.DOTALL)
     if up_section:
         rows = re.findall(r'\[(.*?)\]\(.*?\)\s+([\d,]+\.?\d*)\s+([\d,]+\.?\d*)', up_section.group(1))
         for name, cmp, contrib in rows[:5]:
             out['up'].append({'name': name, 'cmp': cmp.replace(',', ''), 'contribution': contrib.replace(',', '')})
-    
+
     down_section = re.search(r'Stocks dragging Indices DOWN(.*?)(?:##|$)', text, re.DOTALL)
     if down_section:
         rows = re.findall(r'\[(.*?)\]\(.*?\)\s+([\d,]+\.?\d*)\s+([-\d,]+\.?\d*)', down_section.group(1))
         for name, cmp, contrib in rows[:5]:
             out['down'].append({'name': name, 'cmp': cmp.replace(',', ''), 'contribution': contrib.replace(',', '')})
-    
+
     return out
 
 def parse_auto_sales(html):
@@ -263,7 +263,7 @@ def parse_auto_sales(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {}
     # Extract key sales figures
     patterns = {
@@ -276,7 +276,7 @@ def parse_auto_sales(html):
         m = re.search(pat, text, re.IGNORECASE)
         if m:
             out[k] = m.group(1) if m.lastindex == 1 else m.group(2)
-    
+
     return out
 
 def parse_sunpharma(html):
@@ -285,13 +285,13 @@ def parse_sunpharma(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {'targets': []}
     # Brokerage targets
     broker_pattern = r'(Nirmal Bang|Nuvama|Emkay|Prabhudas Lilladher|JM Financial).*?(?:Target price|target).*?Rs\s*([\d,]+)'
     for m in re.finditer(broker_pattern, text, re.IGNORECASE):
         out['targets'].append({'broker': m.group(1), 'target': m.group(2).replace(',', '')})
-    
+
     return out
 
 def parse_reliance(html):
@@ -300,7 +300,7 @@ def parse_reliance(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {'targets': []}
     # Targets mentioned
     target_pattern = r'(?:target|Target).*?Rs\s*([\d,]+)'
@@ -308,7 +308,7 @@ def parse_reliance(html):
         target = m.group(1).replace(',', '')
         if int(target) > 1000:  # Filter reasonable targets
             out['targets'].append(target)
-    
+
     return out
 
 def parse_oil(html):
@@ -317,7 +317,7 @@ def parse_oil(html):
         return {}
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     out = {}
     brent = re.search(r'Brent crude.*?\$(\d+(?:\.\d+)?)', text, re.IGNORECASE)
     if brent:
@@ -325,7 +325,7 @@ def parse_oil(html):
     wti = re.search(r'WTI.*?\$(\d+(?:\.\d+)?)', text, re.IGNORECASE)
     if wti:
         out['wti'] = wti.group(1)
-    
+
     return out
 
 def parse_et_livemint(html):
@@ -334,13 +334,13 @@ def parse_et_livemint(html):
         return []
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.get_text()
-    
+
     gainers = []
     # Pattern: "ITI 259.00 43.15 19.99%"
     rows = re.findall(r'(ITI|Engineers India|Affle|Dixon|Reliance).*?(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%', text)
     for name, price, chg, pct in rows[:5]:
         gainers.append({'name': name, 'price': price, 'change': chg, 'pct': pct})
-    
+
     return gainers
 
 # ─── REPORT GENERATION ───────────────────────────────────────────────────
@@ -365,53 +365,53 @@ def generate_report(data):
     sunpharma = data.get('moneycontrol_sunpharma', {})
     et_gainers = data.get('et_markets', [])
     lm_gainers = data.get('livemint_markets', [])
-    
+
     # Use Yahoo Finance as primary for index levels (more reliable)
     nifty_price = y_nifty.get('price', mc.get('nifty', {}).get('price', '23440.80'))
     nifty_change = y_nifty.get('change', mc.get('nifty', {}).get('change', '+387.70'))
     nifty_pct = y_nifty.get('pct', mc.get('nifty', {}).get('pct', '+1.68'))
-    
+
     bn_price = y_bn.get('price', mc.get('banknifty', {}).get('price', '55002.20'))
     bn_change = y_bn.get('change', mc.get('banknifty', {}).get('change', '+315.25'))
     bn_pct = y_bn.get('pct', mc.get('banknifty', {}).get('pct', '+0.58'))
-    
+
     niftyit_price = mc.get('niftyit', {}).get('price', '32442.50')
     niftyit_change = mc.get('niftyit', {}).get('change', '-164.40')
     niftyit_pct = mc.get('niftyit', {}).get('pct', '-0.50')
-    
+
     niftyauto_price = mc.get('niftyauto', {}).get('price', '25761.00')
     niftyauto_change = mc.get('niftyauto', {}).get('change', '+338.30')
     niftyauto_pct = mc.get('niftyauto', {}).get('pct', '+1.33')
-    
+
     vix = tech.get('vix', '15.50')
     vix_chg = tech.get('vix_change_pct', '1.29')
-    
+
     fii_cash = mc.get('fii_cash', '3114.68')
     dii_cash = mc.get('dii_cash', '-392.20')
     fii_equity = mc.get('fii_equity_latest', '4457.80')
-    
+
     usdinr = y_usdinr.get('price', '94.89')
     usdinr_chg = y_usdinr.get('change', '-0.05')
     usdinr_pct = y_usdinr.get('pct', '-0.05')
-    
+
     sp500 = y_sp500.get('price', '7541.40')
     sp500_chg = y_sp500.get('change', '-38.67')
     sp500_pct = y_sp500.get('pct', '-0.51')
-    
+
     dow = y_dow.get('price', '51983.98')
     dow_chg = y_dow.get('change', '+213.67')
     dow_pct = y_dow.get('pct', '+0.41')
-    
+
     nasdaq = y_nasdaq.get('price', '25164.32')
     nasdaq_chg = y_nasdaq.get('change', '-272.68')
     nasdaq_pct = y_nasdaq.get('pct', '-1.07')
-    
+
     us10y = y_10y.get('price', '4.894')
     us10y_chg = y_10y.get('change', '-0.035')
     us10y_pct = y_10y.get('pct', '-0.71')
-    
+
     brent = oil.get('brent', '106.65')
-    
+
     pcr = setup.get('pcr', '1.4')
     long_buildup = setup.get('long_buildup', '73')
     long_unwinding = setup.get('long_unwinding', '18')
@@ -419,33 +419,33 @@ def generate_report(data):
     max_call_oi = setup.get('max_call_oi', '1.1')
     max_put_strike = setup.get('max_put_strike', '23000')
     max_put_oi = setup.get('max_put_oi', '1.44')
-    
+
     # Bank Nifty contributors
     bn_up = bn.get('contributors_up', [])
     bn_down = bn.get('contributors_down', [])
-    
+
     # Nifty IT contributors
     ni_up = ni.get('up', [])
     ni_down = ni.get('down', [])
-    
+
     # Auto sales
     maruti_sales = auto.get('maruti', '276120')
     maruti_pct = auto.get('maruti_pct', '25')
     tvs_pct = auto.get('tvs', '29')
     tata_cv_pct = auto.get('tata_cv', '27')
     ashok_pct = auto.get('ashok', '23')
-    
+
     # Sun Pharma targets
     sp_targets = sunpharma.get('targets', [])
-    
+
     # Reliance targets
     rel_targets = reliance.get('targets', []) + choksey.get('targets', [])
-    
+
     # ET/LM gainers
     top_gainers = et_gainers if et_gainers else lm_gainers
-    
+
     now_ist = datetime.now(IST).strftime('%d-%b-%Y %H:%M IST')
-    
+
     md = f'''# Daily Market Scan — {SCAN_DATE}
 **Prepared:** {now_ist} | **Data as of:** {(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close (T-1)  
 **Analyst:** Goldmen Intern — Senior Indian Equity Research  
@@ -581,10 +581,10 @@ Nifty 50 staged its **largest single-day gain in ~5 months (+{nifty_pct}%)**, cl
 # ─── MAIN ────────────────────────────────────────────────────────────────
 def main():
     print(f"[INFO] Starting daily market scan for {SCAN_DATE}")
-    
+
     # Fetch all sources
     raw_data = fetch_all()
-    
+
     # Parse each source
     parsed = {}
     parsed['moneycontrol_markets'] = parse_moneycontrol_markets(raw_data.get('moneycontrol_markets'))
@@ -599,14 +599,14 @@ def main():
     parsed['yahoo_10y'] = parse_yahoo_quote(raw_data.get('yahoo_10y'), 'TNX')
     parsed['et_markets'] = parse_et_livemint(raw_data.get('et_markets'))
     parsed['livemint_markets'] = parse_et_livemint(raw_data.get('livemint_markets'))
-    
+
     # Generate report
     report = generate_report(parsed)
-    
+
     # Write output
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write(report)
-    
+
     print(f"[SUCCESS] Report written to {OUTPUT_FILE}")
     return 0
 
