@@ -8,13 +8,11 @@ parquet for Nifty 50 with gap/duplicate/timezone checks.
 from __future__ import annotations
 
 import abc
-import os
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 import yfinance as yf
 

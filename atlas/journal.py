@@ -433,7 +433,6 @@ def get_ledger_stats() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Quick test: write and read a regime entry
-    import tempfile
     import os
 
     # Test writing a regime entry
