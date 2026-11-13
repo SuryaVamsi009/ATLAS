@@ -227,9 +227,9 @@ def vwap(bars: list[list[float]], anchor: int | None = None) -> np.ndarray:
                 vwap_values[i] = cum_pv / cum_vol
     else:
         # Cumulative VWAP from start
-        cum_pv = np.cumsum(typical_prices * volumes)
-        cum_vol = np.cumsum(volumes)
-        vwap_values = np.where(cum_vol > 0, cum_pv / cum_vol, np.nan)  # type: ignore[assignment]
+        cum_pv_arr: np.ndarray = np.cumsum(typical_prices * volumes)
+        cum_vol_arr: np.ndarray = np.cumsum(volumes)
+        vwap_values = np.where(cum_vol_arr > 0, cum_pv_arr / cum_vol_arr, np.nan)  # type: ignore[assignment]
 
     return vwap_values
 
