@@ -215,8 +215,6 @@ Ben is trained on the complete ATLAS codebase, the 35 known bugs (GitHub issues 
 ### Triggers
 - Manual invocation: "Ben, fix issue #10"
 - GitHub issue labeled `bug` + `atlas`
-- Jira ticket assigned to Ben
-- Scheduled bug bash sessions
 
 ## Usage Examples
 

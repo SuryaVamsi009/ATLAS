@@ -203,7 +203,6 @@ grep -rn "api_call_count" atlas/orchestrator.py
 
 ### Triggers
 - Manual invocation: "Pacman, scan the codebase for bugs"
-- Scheduled: Daily/weekly full scan
 - Pre-PR: "Pacman, scan changed files"
 - Post-Ben-fix: "Pacman, verify fixes for issues #5-#18"
 
