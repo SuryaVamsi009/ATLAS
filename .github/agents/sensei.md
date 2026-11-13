@@ -34,13 +34,12 @@ python sensai.py eval NAME [--version N] [--split dev|heldout]
 python sensai.py tune NAME [--iters 4] [--min-gain 0.2] [--target 9.0]
 ```
 
-### 2. ATLAS 6-Layer Architecture Support
-- L1 Data Ingestion: Market scan data integration
-- L2 RAG Corpus: Pattern and regime database management
-- L3 Research AI: Regime flag and event alert generation
-- L4 DecisionProposal + RiskVerdict: Structured decision making
-- L5 KiteAdapter execution: Order execution framework
-- L6 Journal ledger: Trade journal and P&L tracking
+### 2. ATLAS Architecture Support
+- L1 Data Ingestion: `atlas/quant/data.py` market data loaders
+- L2 State Computation: `atlas/state_snapshot.py` indicator calculation
+- L3 Strategy Signals: `atlas/quant/strategies.py`, `atlas/quant/features.py`
+- L4 Decisions: `atlas/decision_proposal.py` structured hand-off
+- L5 Journal & Eval: `atlas/journal.py`, `atlas/eval_set.py`
 
 ### 3. Market Analysis & Scan Generation
 - Generate India market scans (Nifty 50, Bank Nifty analysis)
@@ -212,7 +211,7 @@ Please incorporate this feedback into your next Quant Report generation cycle.
 ```
 
 ### Automation Integration
-- This workflow should trigger automatically when `atlas/quant/backtest.py` completes a run
+- This workflow should trigger automatically when `atlas/eval_set.py` completes a run
 - Can be scheduled via session automation (e.g., after market close on backtest days)
 - Goldmen Intern's 9 AM IST scan can include quant report check if backtest ran overnight
 
