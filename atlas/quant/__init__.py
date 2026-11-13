@@ -1,9 +1,4 @@
-"""Quant package for ATLAS - data, backtesting and strategy-validation stack.
-
-This package provides a quantitative trading layer that plugs into the existing
-ATLAS flow without changing the contracts (StateSnapshot → DecisionProposal →
-RiskVerdict → broker adapter → journal). Research and paper trading only,
-no live orders.
+"""Quant package for ATLAS - data, features and strategy signals.
 
 Modules:
 - data: Loader interface with swappable sources (yfinance intraday) and 1-minute
