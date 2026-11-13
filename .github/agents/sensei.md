@@ -66,8 +66,6 @@ python sensai.py tune NAME [--iters 4] [--min-gain 0.2] [--target 9.0]
 - **Pacman** (`.github/agents/pacman.md`) — Bug Finder for systematic codebase scanning and bug discovery
 - **Goldmen Intern** (`.github/agents/goldmen_intern.md`) — Daily market scan generator
 - **Director** (`.github/agents/director.md`) — Market intelligence reviewer & mentor
-- **Jira Agent** (`.github/agents/jira_agent.md`) — Jira issue management
-- **Notion Agent** (`.github/agents/notion_agent.md`) — Notion page/database management
 
 ### 7. Agent Validation & Testing Protocol
 **YAML Frontmatter Requirement:** All custom agents in `.copilot/agents/` must have valid YAML frontmatter with these required fields:

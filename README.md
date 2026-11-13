@@ -60,7 +60,6 @@ atlas/
   state_snapshot.py      # Frozen dataclass — the model's only input
   eval_pipeline.py       # Evaluation pipeline + confidence calibration
   eval_set.py            # Outcome grading, mechanical call grading
-  functions.py           # Shared helpers (rate limits, sizing, ledger export)
   brokers/
     kite_adapter.py      # Kite Connect adapter
 scripts/
@@ -68,14 +67,7 @@ scripts/
 market-scan/             # Generated daily scans and director reviews
 .github/
   agents/                # Custom agent definitions
-  skills/                # Skill configuration
   workflows/             # GitHub Actions automation
-.agents/
-  skills/                # Installed agent skills (universal layout, e.g. mattpocock/skills)
-.claude/
-  skills/                # Symlinks to .agents/skills for Claude Code
-skills-lock.json         # Lockfile for installed skill packages
-functions.py             # Top-level helper functions
 validate_agents.py       # Agent frontmatter validation
 ATLAS_NEXT_STEPS.md      # Prioritized roadmap
 copilot-instructions.md  # Contributor/agent guidance
@@ -106,26 +98,6 @@ python validate_agents.py
 ```
 
 > The script reads from `~/.copilot/agents` (set by `AGENTS_DIR` in `validate_agents.py`), not from `.github/agents/`.
-
----
-
-## Skills
-
-Agent skills are installed with the [skills](https://github.com/vercel-labs/skills) CLI into the universal `.agents/skills/` layout (recognized by GitHub Copilot and 20+ other agents), with Claude Code symlinks in `.claude/skills/`. Installed packages are pinned in `skills-lock.json`.
-
-```bash
-# List skills available in a package
-npx skills@latest add mattpocock/skills --list
-
-# Install all skills from a package into the project
-npx skills@latest add mattpocock/skills --skill '*' -y
-
-# List installed skills / update them
-npx skills@latest list
-npx skills@latest update --project -y
-```
-
-Currently installed: **38 skills from [`mattpocock/skills`](https://github.com/mattpocock/skills)** — engineering workflow skills (`tdd`, `code-review`, `diagnosing-bugs`, `implement`, `to-spec`, `to-tickets`, `pr`, `research`, `retro`, …) plus writing and setup skills. See `.agents/skills/` for the full list; `ask-matt` routes between them.
 
 ---
 
