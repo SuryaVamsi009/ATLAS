@@ -209,6 +209,7 @@ class YFinanceLoader(DataLoader):
     def _get_cache_path(self, symbol: str, timeframe: str) -> Path:
         """Get cache file path for symbol/timeframe."""
         safe_symbol = symbol.replace(".", "_").replace("^", "").replace("/", "_")
+        assert self.cache_dir is not None
         return self.cache_dir / f"{safe_symbol}_{timeframe}.parquet"
 
     def _load_from_cache(
@@ -241,7 +242,7 @@ class YFinanceLoader(DataLoader):
             if filtered.empty:
                 return None
 
-            return filtered[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()
+            return filtered[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()  # type: ignore
 
         except Exception:
             return None
@@ -319,7 +320,17 @@ class ParquetCollector:
         Returns:
             Dict with collection statistics
         """
-        all_stats = {
+        from typing import TypedDict
+
+        class CollectStats(TypedDict):
+            symbols_processed: int
+            total_bars_written: int
+            gaps_detected: int
+            duplicates_removed: int
+            timezone_errors: int
+            errors: list[str]
+
+        all_stats: CollectStats = {
             "symbols_processed": 0,
             "total_bars_written": 0,
             "gaps_detected": 0,
@@ -352,7 +363,7 @@ class ParquetCollector:
             except Exception as e:
                 all_stats["errors"].append(f"{symbol}: {str(e)}")
 
-        return all_stats
+        return all_stats  # type: ignore[return-value]
 
     def _validate_and_clean_bars(
         self,
@@ -493,7 +504,7 @@ class ParquetCollector:
 
         try:
             df = pd.read_parquet(partition_file)
-            return df[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()
+            return df[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()  # type: ignore
         except Exception:
             return []
 

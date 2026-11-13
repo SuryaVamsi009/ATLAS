@@ -222,7 +222,7 @@ class ORBStrategy(Strategy):
             # Conviction based on volume and breakout strength
             breakout_strength = (current_high - or_high) / or_high
             volume_score = min(volume_ratio / 2.0, 1.0)
-            conviction = min(0.5 + 0.3 * breakout_strength * 100 + 0.2 * volume_score, 0.95)
+            conviction = float(min(0.5 + 0.3 * breakout_strength * 100 + 0.2 * volume_score, 0.95))
 
             if conviction >= self.min_conviction:
                 return Signal(
@@ -250,7 +250,7 @@ class ORBStrategy(Strategy):
 
             breakdown_strength = (or_low - current_low) / or_low
             volume_score = min(volume_ratio / 2.0, 1.0)
-            conviction = min(0.5 + 0.3 * breakdown_strength * 100 + 0.2 * volume_score, 0.95)
+            conviction = float(min(0.5 + 0.3 * breakdown_strength * 100 + 0.2 * volume_score, 0.95))
 
             if conviction >= self.min_conviction:
                 return Signal(
@@ -492,7 +492,6 @@ class GapFadeStrategy(Strategy):
         # Check for reversal in first N bars
         first_bar_high = bars[0][2]
         first_bar_low = bars[0][3]
-        first_bar_close = bars[0][4]
 
         # Look for rejection/reversal in early bars
         for i in range(1, min(self.lookback_bars, len(bars))):
@@ -591,7 +590,7 @@ class GapFadeStrategy(Strategy):
 # Strategy Registry
 # ---------------------------------------------------------------------------
 
-STRATEGY_REGISTRY = {
+STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "orb": ORBStrategy,
     "vwap_reversion": VWAPReversionStrategy,
     "gap_fade": GapFadeStrategy,

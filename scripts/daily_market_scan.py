@@ -349,8 +349,6 @@ def generate_report(data):
     mc = data.get('moneycontrol_markets', {})
     tech = data.get('moneycontrol_technical', {})
     setup = data.get('moneycontrol_tradesetup', {})
-    bn = data.get('moneycontrol_banknifty', {})
-    ni = data.get('moneycontrol_niftyit', {})
     y_nifty = data.get('yahoo_nifty', {})
     y_bn = data.get('yahoo_banknifty', {})
     y_usdinr = data.get('yahoo_usdinr', {})
@@ -360,27 +358,18 @@ def generate_report(data):
     y_10y = data.get('yahoo_10y', {})
     auto = data.get('moneycontrol_auto', {})
     oil = data.get('moneycontrol_oil', {})
-    reliance = data.get('moneycontrol_reliance', {})
-    choksey = data.get('moneycontrol_choksey', {})
-    sunpharma = data.get('moneycontrol_sunpharma', {})
-    et_gainers = data.get('et_markets', [])
-    lm_gainers = data.get('livemint_markets', [])
 
     # Use Yahoo Finance as primary for index levels (more reliable)
     nifty_price = y_nifty.get('price', mc.get('nifty', {}).get('price', '23440.80'))
-    nifty_change = y_nifty.get('change', mc.get('nifty', {}).get('change', '+387.70'))
     nifty_pct = y_nifty.get('pct', mc.get('nifty', {}).get('pct', '+1.68'))
 
     bn_price = y_bn.get('price', mc.get('banknifty', {}).get('price', '55002.20'))
-    bn_change = y_bn.get('change', mc.get('banknifty', {}).get('change', '+315.25'))
     bn_pct = y_bn.get('pct', mc.get('banknifty', {}).get('pct', '+0.58'))
 
     niftyit_price = mc.get('niftyit', {}).get('price', '32442.50')
-    niftyit_change = mc.get('niftyit', {}).get('change', '-164.40')
     niftyit_pct = mc.get('niftyit', {}).get('pct', '-0.50')
 
     niftyauto_price = mc.get('niftyauto', {}).get('price', '25761.00')
-    niftyauto_change = mc.get('niftyauto', {}).get('change', '+338.30')
     niftyauto_pct = mc.get('niftyauto', {}).get('pct', '+1.33')
 
     vix = tech.get('vix', '15.50')
@@ -391,23 +380,18 @@ def generate_report(data):
     fii_equity = mc.get('fii_equity_latest', '4457.80')
 
     usdinr = y_usdinr.get('price', '94.89')
-    usdinr_chg = y_usdinr.get('change', '-0.05')
     usdinr_pct = y_usdinr.get('pct', '-0.05')
 
     sp500 = y_sp500.get('price', '7541.40')
-    sp500_chg = y_sp500.get('change', '-38.67')
     sp500_pct = y_sp500.get('pct', '-0.51')
 
     dow = y_dow.get('price', '51983.98')
-    dow_chg = y_dow.get('change', '+213.67')
     dow_pct = y_dow.get('pct', '+0.41')
 
     nasdaq = y_nasdaq.get('price', '25164.32')
-    nasdaq_chg = y_nasdaq.get('change', '-272.68')
     nasdaq_pct = y_nasdaq.get('pct', '-1.07')
 
     us10y = y_10y.get('price', '4.894')
-    us10y_chg = y_10y.get('change', '-0.035')
     us10y_pct = y_10y.get('pct', '-0.71')
 
     brent = oil.get('brent', '106.65')
@@ -420,35 +404,16 @@ def generate_report(data):
     max_put_strike = setup.get('max_put_strike', '23000')
     max_put_oi = setup.get('max_put_oi', '1.44')
 
-    # Bank Nifty contributors
-    bn_up = bn.get('contributors_up', [])
-    bn_down = bn.get('contributors_down', [])
-
-    # Nifty IT contributors
-    ni_up = ni.get('up', [])
-    ni_down = ni.get('down', [])
-
-    # Auto sales
-    maruti_sales = auto.get('maruti', '276120')
     maruti_pct = auto.get('maruti_pct', '25')
     tvs_pct = auto.get('tvs', '29')
     tata_cv_pct = auto.get('tata_cv', '27')
     ashok_pct = auto.get('ashok', '23')
 
-    # Sun Pharma targets
-    sp_targets = sunpharma.get('targets', [])
-
-    # Reliance targets
-    rel_targets = reliance.get('targets', []) + choksey.get('targets', [])
-
-    # ET/LM gainers
-    top_gainers = et_gainers if et_gainers else lm_gainers
-
     now_ist = datetime.now(IST).strftime('%d-%b-%Y %H:%M IST')
 
     md = f'''# Daily Market Scan — {SCAN_DATE}
-**Prepared:** {now_ist} | **Data as of:** {(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close (T-1)  
-**Analyst:** Goldmen Intern — Senior Indian Equity Research  
+**Prepared:** {now_ist} | **Data as of:** {(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close (T-1)
+**Analyst:** Goldmen Intern — Senior Indian Equity Research
 **Sources:** NSE India, Moneycontrol, Economic Times, LiveMint, Yahoo Finance, Reuters (cited inline)
 
 ---
@@ -478,8 +443,8 @@ Nifty 50 staged its **largest single-day gain in ~5 months (+{nifty_pct}%)**, cl
 | **Dow Jones** | {float(dow):,.2f} | {dow_pct}% | 🟢 Resilient |
 | **Nasdaq** | {float(nasdaq):,.2f} | {nasdaq_pct}% | 🔴 Tech selloff |
 
-**Weekly Momentum:** Nifty +3.2% WoW (3-day winning streak); Bank Nifty +1.1% WoW.  
-**Options Structure:** Max Call OI at {max_call_strike} ({max_call_oi} Cr) & 23,600 (1.04 Cr) = resistance; Max Put OI at {max_put_strike} ({max_put_oi} Cr) & 23,200 (1.07 Cr) = support. PCR {pcr} (bullish).  
+**Weekly Momentum:** Nifty +3.2% WoW (3-day winning streak); Bank Nifty +1.1% WoW.
+**Options Structure:** Max Call OI at {max_call_strike} ({max_call_oi} Cr) & 23,600 (1.04 Cr) = resistance; Max Put OI at {max_put_strike} ({max_put_oi} Cr) & 23,200 (1.07 Cr) = support. PCR {pcr} (bullish).
 **F&O Activity:** {long_buildup} stocks long build-up (bullish), {long_unwinding} long unwinding.
 
 ---
@@ -531,43 +496,43 @@ Nifty 50 staged its **largest single-day gain in ~5 months (+{nifty_pct}%)**, cl
 
 ## 📚 FULL SOURCE LIST (with dates)
 
-1. **Moneycontrol — Markets Homepage** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Nifty {nifty_price}, Bank Nifty {bn_price}, FII/DII cash flows, top gainers/losers, long build-up list  
+1. **Moneycontrol — Markets Homepage** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Nifty {nifty_price}, Bank Nifty {bn_price}, FII/DII cash flows, top gainers/losers, long build-up list
    `https://www.moneycontrol.com/markets/`
 
-2. **Moneycontrol — Markets News section** (live index page, fetched fresh each run) — latest technical views, trade setups, and stock-specific market news  
+2. **Moneycontrol — Markets News section** (live index page, fetched fresh each run) — latest technical views, trade setups, and stock-specific market news
    `https://www.moneycontrol.com/news/business/markets/`
 
-3. **Moneycontrol — Bank Nifty Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — HDFC Bank +₹169 Cr, SBI +₹159 Cr, ICICI -₹116 Cr, Kotak -₹37 Cr, Axis -₹35 Cr; tech ratings per stock  
+3. **Moneycontrol — Bank Nifty Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — HDFC Bank +₹169 Cr, SBI +₹159 Cr, ICICI -₹116 Cr, Kotak -₹37 Cr, Axis -₹35 Cr; tech ratings per stock
     `https://www.moneycontrol.com/indian-indices/nifty-bank-23.html`
 
-4. **Moneycontrol — Nifty IT Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Coforge +2.6% (Very Bullish), HCL Tech +0.4% (Very Bullish), Infosys -2.0% (Very Bullish but dragging), TCS flat  
+4. **Moneycontrol — Nifty IT Components & Contribution** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Coforge +2.6% (Very Bullish), HCL Tech +0.4% (Very Bullish), Infosys -2.0% (Very Bullish but dragging), TCS flat
     `https://www.moneycontrol.com/indian-indices/nifty-it-19.html`
 
-5. **Yahoo Finance — ^NSEI (Nifty 50)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nifty_price} ({nifty_pct}%), day range 23,207–23,441, 52W 22,180–26,373  
+5. **Yahoo Finance — ^NSEI (Nifty 50)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nifty_price} ({nifty_pct}%), day range 23,207–23,441, 52W 22,180–26,373
     `https://finance.yahoo.com/quote/%5ENSEI/`
 
-6. **Yahoo Finance — ^NSEBANK (Bank Nifty)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {bn_price} ({bn_pct}%), day range 54,582–55,046, 52W 49,955–61,765  
+6. **Yahoo Finance — ^NSEBANK (Bank Nifty)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {bn_price} ({bn_pct}%), day range 54,582–55,046, 52W 49,955–61,765
     `https://finance.yahoo.com/quote/%5ENSEBANK/`
 
-7. **Yahoo Finance — USDINR=X** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — {usdinr} ({usdinr_pct}%), day range 94.69–95.04, 52W 85.86–97.05  
+7. **Yahoo Finance — USDINR=X** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — {usdinr} ({usdinr_pct}%), day range 94.69–95.04, 52W 85.86–97.05
     `https://finance.yahoo.com/quote/USDINR=X/`
 
-8. **Yahoo Finance — ^GSPC (S&P 500)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {sp500} ({sp500_pct}%), day range 7,539–7,662  
+8. **Yahoo Finance — ^GSPC (S&P 500)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {sp500} ({sp500_pct}%), day range 7,539–7,662
     `https://finance.yahoo.com/quote/%5EGSPC/`
 
-9. **Yahoo Finance — ^DJI (Dow Jones)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {dow} ({dow_pct}%), day range 51,982–52,425  
+9. **Yahoo Finance — ^DJI (Dow Jones)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {dow} ({dow_pct}%), day range 51,982–52,425
     `https://finance.yahoo.com/quote/%5EDJI/`
 
-10. **Yahoo Finance — ^IXIC (Nasdaq)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nasdaq} ({nasdaq_pct}%), day range 25,146–25,799  
+10. **Yahoo Finance — ^IXIC (Nasdaq)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {nasdaq} ({nasdaq_pct}%), day range 25,146–25,799
     `https://finance.yahoo.com/quote/%5EIXIC/`
 
-11. **Yahoo Finance — ^TNX (US 10Y Yield)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {us10y}% ({us10y_pct}%), day range 4.869–4.921%  
+11. **Yahoo Finance — ^TNX (US 10Y Yield)** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')} close) — {us10y}% ({us10y_pct}%), day range 4.869–4.921%
     `https://finance.yahoo.com/quote/%5ETNX/`
 
-12. **Economic Times — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers: ITI +20%, Engineers India +15%, Affle +12%, Dixon +12%, Reliance +11.6%  
+12. **Economic Times — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers: ITI +20%, Engineers India +15%, Affle +12%, Dixon +12%, Reliance +11.6%
     `https://economictimes.indiatimes.com/markets`
 
-13. **LiveMint — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers match ET; Gold ₹1,40,130 (+1.19%), Silver ₹1,83,810 (+2.61%); SIP inflows record ₹32,490 Cr  
+13. **LiveMint — Markets** ({(TODAY_IST - timedelta(days=1)).strftime('%d-%b-%Y')}) — Top gainers match ET; Gold ₹1,40,130 (+1.19%), Silver ₹1,83,810 (+2.61%); SIP inflows record ₹32,490 Cr
     `https://www.livemint.com/market`
 
 ---

@@ -8,7 +8,10 @@ Bar format: [timestamp_ms, open, high, low, close, volume]
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Helper functions
@@ -44,7 +47,7 @@ def _extract_typical_price(bars: list[list[float]]) -> np.ndarray:
     highs = _extract_highs(bars)
     lows = _extract_lows(bars)
     closes = _extract_closes(bars)
-    return (highs + lows + closes) / 3.0
+    return (highs + lows + closes) / 3.0  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +224,7 @@ def vwap(bars: list[list[float]], anchor: int | None = None) -> np.ndarray:
         # Cumulative VWAP from start
         cum_pv = np.cumsum(typical_prices * volumes)
         cum_vol = np.cumsum(volumes)
-        vwap_values = np.where(cum_vol > 0, cum_pv / cum_vol, np.nan)
+        vwap_values = np.where(cum_vol > 0, cum_pv / cum_vol, np.nan)  # type: ignore[assignment]
 
     return vwap_values
 
@@ -514,7 +517,7 @@ def compute_all_features(bars: list[list[float]]) -> dict:
     if not bars:
         return {}
 
-    features = {}
+    features: dict[str, Any] = {}
 
     # RSI
     features["rsi"] = rsi(bars, 14).tolist()
@@ -557,7 +560,3 @@ def compute_all_features(bars: list[list[float]]) -> dict:
     features["gap_type"] = gap_type
 
     return features
-
-
-# Need pandas for timestamp conversion in opening_range
-import pandas as pd

@@ -175,7 +175,7 @@ def read_latest_regime_entry() -> dict[str, Any] | None:
     if not lines:
         return None
     # Return the last entry
-    return json.loads(lines[-1].strip())
+    return json.loads(lines[-1].strip())  # type: ignore
 
 
 def read_all_regime_entries() -> list[dict[str, Any]]:
@@ -270,7 +270,7 @@ def write_risk_verdict_entry(
                 "final_qty": risk_verdict.final_qty,
                 "final_stop": risk_verdict.final_stop,
                 "veto_reason": risk_verdict.veto_reason.value
-                if risk_verdict.veto_reason is not VetoReason.NONE
+                if risk_verdict.veto_reason is not None
                 else None,
                 "checks": risk_verdict.checks,
             }
@@ -326,7 +326,6 @@ def _calculate_pnl(entry: dict[str, Any]) -> None:
     exit_price = order_result.get("exit_price") or fill_price
     quantity = order_result.get("quantity", 0)
     action = entry.get("decision_proposal", {}).get("action", "BUY")
-    decision_conf = entry.get("decision_proposal", {}).get("confidence", 0.5)
 
     if fill_price is None or exit_price is None:
         entry["pnl"] = None
@@ -451,7 +450,7 @@ def get_ledger_stats() -> dict[str, Any]:
             completed += 1
 
     # Find most common regime
-    most_common_regime = max(regime_dist, key=regime_dist.get) if regime_dist else "none"
+    most_common_regime = max(regime_dist, key=lambda k: regime_dist[k]) if regime_dist else "none"
 
     return {
         "total_entries": total,
