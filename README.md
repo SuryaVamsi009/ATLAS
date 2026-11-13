@@ -32,7 +32,7 @@ validate_agents.py       # Agent frontmatter validation
 pyproject.toml           # Package + tool configuration
 ```
 
-The former 6-layer trading core (orchestrator, research_ai, risk_verdict, rag_corpus, brokers) is archived on branch `archive/six-layer-core`, pending removal from main.
+The former 6-layer trading core (orchestrator, research_ai, risk_verdict, rag_corpus, brokers) is archived at tag `archive/pre-cleanup-2026-11-14` and removed from this branch.
 
 ## Setup
 

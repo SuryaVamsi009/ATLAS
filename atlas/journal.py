@@ -30,15 +30,48 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from atlas.decision_proposal import DecisionProposal
-from atlas.risk_verdict import RiskVerdict, VetoReason
 
 IST = ZoneInfo("Asia/Kolkata")
+
+
+class VetoReason(Enum):
+    """Enum representing the possible veto reasons from risk checks."""
+    SIZE_OK = "size_ok"
+    LOSS_OK = "loss_ok"
+    HOURS_OK = "hours_ok"
+    SYMBOL_OK = "symbol_ok"
+    CONFIDENCE_OK = "confidence_ok"
+    NONE = None
+
+    def __bool__(self) -> bool:
+        """True when this is a real veto (i.e. not NONE)."""
+        return self is not VetoReason.NONE
+
+
+@dataclass
+class RiskVerdict:
+    """Result of a risk verification run.
+
+    Attributes:
+        approved: True only if ALL 5 checks pass.
+        final_qty: Adjusted quantity after risk checks.
+        final_stop: Adjusted stop price after risk checks.
+        veto_reason: The first failing check name, or None if all pass.
+        checks: Dict of 5 boolean checks: size_ok, loss_ok, hours_ok, symbol_ok, confidence_ok.
+    """
+    approved: bool
+    final_qty: float
+    final_stop: float
+    veto_reason: VetoReason | None
+    checks: dict[str, bool]
 
 
 # --- Ledger file path ---

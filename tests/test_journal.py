@@ -11,7 +11,7 @@ import pytest
 
 from atlas import journal
 from atlas.decision_proposal import DecisionProposal
-from atlas.risk_verdict import RiskVerdict, VetoReason
+from atlas.journal import RiskVerdict, VetoReason
 
 IST = ZoneInfo("Asia/Kolkata")
 
