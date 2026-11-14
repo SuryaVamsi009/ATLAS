@@ -26,6 +26,7 @@ def create_test_bars(n: int = 50, start_price: float = 100.0, seed: int = 42) ->
     Format: [timestamp_ms, open, high, low, close, volume]
     """
     import pandas as pd
+
     rng = np.random.default_rng(seed)
     base_time = pd.Timestamp("2026-11-01 09:15", tz="Asia/Kolkata").timestamp() * 1000
     bars = []
@@ -50,9 +51,9 @@ class TestRSI:
         # Make it trend up
         for i, bar in enumerate(bars):
             bar[4] = 100 + i * 0.5  # close
-            bar[1] = bar[4] - 0.1   # open
-            bar[2] = bar[4] + 0.2   # high
-            bar[3] = bar[4] - 0.2   # low
+            bar[1] = bar[4] - 0.1  # open
+            bar[2] = bar[4] + 0.2  # high
+            bar[3] = bar[4] - 0.2  # low
         result = rsi(bars, period=14)
         assert len(result) == len(bars)
         # Last value should be > 50 for uptrend
@@ -64,9 +65,9 @@ class TestRSI:
         # Make it trend down
         for i, bar in enumerate(bars):
             bar[4] = 110 - i * 0.5  # close
-            bar[1] = bar[4] + 0.1   # open
-            bar[2] = bar[4] + 0.2   # high
-            bar[3] = bar[4] - 0.2   # low
+            bar[1] = bar[4] + 0.1  # open
+            bar[2] = bar[4] + 0.2  # high
+            bar[3] = bar[4] - 0.2  # low
         result = rsi(bars, period=14)
         assert result[-1] < 50
         assert result[-1] >= 0
@@ -168,7 +169,7 @@ class TestOpeningRange:
         # Set opening range (first 15 bars)
         for i in range(15):
             bars[i][2] = 101.0  # high
-            bars[i][3] = 99.0   # low
+            bars[i][3] = 99.0  # low
         # Breakout above at bar 20
         bars[20][2] = 102.0  # high breaks above
         bars[20][4] = 101.5  # close
@@ -281,11 +282,15 @@ class TestMACD:
         assert len(histogram) == len(bars)
         # Histogram = MACD - Signal
         valid = ~np.isnan(histogram)
-        np.testing.assert_array_almost_equal(histogram[valid], macd_line[valid] - signal_line[valid])
+        np.testing.assert_array_almost_equal(
+            histogram[valid], macd_line[valid] - signal_line[valid]
+        )
 
     def test_macd_custom_periods(self):
         bars = create_test_bars(50, 100.0)
-        macd_line, signal_line, histogram = macd(bars, fast_period=8, slow_period=21, signal_period=5)
+        macd_line, signal_line, histogram = macd(
+            bars, fast_period=8, slow_period=21, signal_period=5
+        )
         assert len(macd_line) == len(bars)
 
 
@@ -312,12 +317,23 @@ class TestComputeAllFeatures:
         bars = create_test_bars(100, 100.0)
         features = compute_all_features(bars)
         expected_keys = [
-            "rsi", "ema_20", "ema_50", "atr", "vwap",
-            "macd", "macd_signal", "macd_hist",
-            "bb_middle", "bb_upper", "bb_lower",
-            "stoch_k", "stoch_d",
-            "opening_range_high", "opening_range_low",
-            "gap_pct", "gap_type",
+            "rsi",
+            "ema_20",
+            "ema_50",
+            "atr",
+            "vwap",
+            "macd",
+            "macd_signal",
+            "macd_hist",
+            "bb_middle",
+            "bb_upper",
+            "bb_lower",
+            "stoch_k",
+            "stoch_d",
+            "opening_range_high",
+            "opening_range_low",
+            "gap_pct",
+            "gap_type",
         ]
         for key in expected_keys:
             assert key in features, f"Missing feature: {key}"

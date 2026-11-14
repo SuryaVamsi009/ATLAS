@@ -26,22 +26,20 @@ Like its namesake, Mergesmith forges and merges repositories and feature request
 ### Mode A: Repository Integration
 1. **Repository Analysis** — Clone, inspect structure, detect language/framework, map to ATLAS layers
 2. **Integration Planning** — Create spec, define adapters, plan tests, assess risk
-3. **Code Generation & PR** — Generate adapters, configs, tests, RAG patterns; create integration PR
-4. **RAG Corpus Update** — Extract domain knowledge, generate pattern entries, tag with regimes
-5. **Registration & Validation** — Register in orchestrator, update risk/journal configs, run integration tests
+3. **Code Generation & PR** — Generate adapters, configs, tests; create integration PR
+4. **Registration & Validation** — Update journal configs, run integration tests
 
 ### Mode B: Feature Engineering
 1. **Architecture Analysis** — Read copilot-instructions.md, target modules, understand protocols
-2. **Design & Spec** — Create technical spec with StateSnapshot inputs, JournalEntry outputs, RiskVerdict checks
-3. **Implementation** — Write code across L1-L6 following ATLAS patterns (frozen dataclasses, append-only journal, two-AI boundary)
+2. **Design & Spec** — Create technical spec with StateSnapshot inputs, JournalEntry outputs, DecisionProposal checks
+3. **Implementation** — Write code across L1-L6 following ATLAS patterns (frozen dataclasses, append-only journal)
 4. **Testing & Backtest** — Unit tests, integration tests via eval_pipeline.py, walk-forward backtests via eval_set.py
 5. **Documentation & PR** — Update docs, create PR with benchmarks, rollback plan, migration guide
 
 ## Shared ATLAS Protocol Knowledge
 - **StateSnapshot**: Frozen dataclass — only thing models see; all values computed in Python
-- **JournalEntry**: Append-only JSONL with 12 required fields (entry_id, timestamp_ist, snapshot_id, regime_flags, event_alerts, thesis, decision_proposal, risk_verdict, order_result, pnl, confidence_calibration)
-- **RiskVerdict**: 5 checks (size_ok, loss_ok, hours_ok, symbol_ok, confidence_ok) — all must pass
-- **Two-AI Boundary**: Research AI proposes, RiskVerdict disposes — no model places orders
+- **JournalEntry**: Append-only JSONL with required fields (entry_id, timestamp_ist, snapshot_id, regime_flags, event_alerts, thesis, decision_proposal, order_result, pnl, confidence_calibration)
+- **DecisionProposal**: Structured hand-off between analysis and execution
 - **Layer Contracts**: L1→L2→L3→L4→L5→L6 with strict interfaces
 
 ## Output Structure
@@ -67,7 +65,6 @@ Like its namesake, Mergesmith forges and merges repositories and feature request
 - `atlas/features/{feature_name}/` — Feature modules
 - `config/integrations/{name}.yaml` — Configuration
 - `tests/integration/test_{name}.py` — Test suite
-- `rag_corpus/patterns/{name}_patterns.jsonl` — RAG patterns
 
 ## Risk Assessment
 - Latency impact: {ms}
@@ -89,7 +86,7 @@ Like its namesake, Mergesmith forges and merges repositories and feature request
 - AST parsing for Python/TypeScript/Go (via `ast`, `tree-sitter`)
 
 ### Feature Development (Engineering Mode)
-- Read and modify ATLAS core modules: `orchestrator.py`, `rag_corpus.py`, `journal.py`, `risk_verdict.py`, `research_ai.py`, `decision_proposal.py`, `state_snapshot.py`, `eval_set.py`, `eval_pipeline.py`
+- Read and modify ATLAS core modules: `decision_proposal.py`, `journal.py`, `state_snapshot.py`, `eval_set.py`, `atlas/quant/data.py`, `atlas/quant/features.py`, `atlas/quant/strategies.py`
 - Follow ATLAS patterns: frozen dataclasses, protocol compliance, journal schema
 - Run `pytest`, `ruff`, `mypy --strict`, `python -m atlas.eval_pipeline`
 
@@ -145,13 +142,13 @@ Like its namesake, Mergesmith forges and merges repositories and feature request
 ### Implement a New Strategy (Engineering)
 ```
 "Add momentum factor strategy to L3 Research AI.
- Use 12-1 momentum with 1-month skip. Integrate with RiskVerdict sizing.
- Add to rag_corpus patterns. Full backtest in eval_set.py."
+ Use 12-1 momentum with 1-month skip. Integrate with DecisionProposal sizing.
+ Full backtest in eval_set.py."
 ```
 
 ### Implement Execution Algorithm (Engineering)
 ```
-"Add TWAP execution algorithm to L5 KiteAdapter.
+"Add TWAP execution algorithm to L5 broker adapter.
  Configurable duration, participation rate, urgency. Slippage model in journal.
  Integration test with paper trading."
 ```
@@ -160,7 +157,6 @@ Like its namesake, Mergesmith forges and merges repositories and feature request
 - [ ] All generated code passes `ruff` and `mypy --strict`
 - [ ] Unit tests cover >90% of new logic
 - [ ] Integration test passes in `eval_pipeline.py`
-- [ ] RAG patterns validate against `rag_corpus.py` schema (if applicable)
 - [ ] Risk parameters within ATLAS global limits
 - [ ] Documentation updated in `copilot-instructions.md`
 - [ ] Backtest results documented (for features with quant impact)

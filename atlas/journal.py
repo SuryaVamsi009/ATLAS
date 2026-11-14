@@ -31,9 +31,9 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -44,6 +44,7 @@ IST = ZoneInfo("Asia/Kolkata")
 
 class VetoReason(Enum):
     """Enum representing the possible veto reasons from risk checks."""
+
     SIZE_OK = "size_ok"
     LOSS_OK = "loss_ok"
     HOURS_OK = "hours_ok"
@@ -67,6 +68,7 @@ class RiskVerdict:
         veto_reason: The first failing check name, or None if all pass.
         checks: Dict of 5 boolean checks: size_ok, loss_ok, hours_ok, symbol_ok, confidence_ok.
     """
+
     approved: bool
     final_qty: float
     final_stop: float
@@ -85,14 +87,14 @@ def _ensure_ledger_dir() -> None:
     os.makedirs(LEDGER_DIR, exist_ok=True)
 
 
-def _append_entry(entry: Dict[str, Any]) -> None:
+def _append_entry(entry: dict[str, Any]) -> None:
     """Append a single entry to the JSONL ledger file."""
     _ensure_ledger_dir()
     with open(LEDGER_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def write_cycle_entry(entry: Dict[str, Any]) -> str:
+def write_cycle_entry(entry: dict[str, Any]) -> str:
     """Persist one full orchestrator cycle (approved or risk-rejected) to the ledger.
 
     Every cycle must be journalled, including risk-rejected ones, so the
@@ -114,10 +116,11 @@ def write_cycle_entry(entry: Dict[str, Any]) -> str:
 
 # --- Research AI write: what Research AI produces ---
 
+
 def write_regime_entry(
     snapshot_id: str,
-    regime_flags: List[str],
-    event_alerts: List[str],
+    regime_flags: list[str],
+    event_alerts: list[str],
     thesis: str,
     confidence: float,
     news_context: str,
@@ -159,7 +162,8 @@ def write_regime_entry(
 
 # --- Agent AI read: what Agent AI consumes ---
 
-def read_latest_regime_entry() -> Optional[Dict[str, Any]]:
+
+def read_latest_regime_entry() -> dict[str, Any] | None:
     """Read the latest Research AI entry from the ledger.
 
     Agent AI reads this to get the regime flags, event alerts, thesis,
@@ -170,15 +174,15 @@ def read_latest_regime_entry() -> Optional[Dict[str, Any]]:
     """
     if not os.path.exists(LEDGER_FILE):
         return None
-    with open(LEDGER_FILE, "r", encoding="utf-8") as f:
+    with open(LEDGER_FILE, encoding="utf-8") as f:
         lines = f.readlines()
     if not lines:
         return None
     # Return the last entry
-    return json.loads(lines[-1].strip())
+    return json.loads(lines[-1].strip())  # type: ignore
 
 
-def read_all_regime_entries() -> List[Dict[str, Any]]:
+def read_all_regime_entries() -> list[dict[str, Any]]:
     """Read all Research AI entries from the ledger.
 
     Useful for weekly calibration review (Step 5: Confidence Calibration).
@@ -188,7 +192,7 @@ def read_all_regime_entries() -> List[Dict[str, Any]]:
     """
     if not os.path.exists(LEDGER_FILE):
         return []
-    with open(LEDGER_FILE, "r", encoding="utf-8") as f:
+    with open(LEDGER_FILE, encoding="utf-8") as f:
         lines = f.readlines()
     entries = []
     for line in lines:
@@ -199,6 +203,7 @@ def read_all_regime_entries() -> List[Dict[str, Any]]:
 
 
 # --- Agent AI write: DecisionProposal hand-off ---
+
 
 def write_decision_proposal_entry(
     snapshot_id: str,
@@ -246,6 +251,7 @@ def write_decision_proposal_entry(
 
 # --- RiskVerdict write: verdict hand-off ---
 
+
 def write_risk_verdict_entry(
     proposal_entry_id: str,
     risk_verdict: RiskVerdict,
@@ -270,7 +276,7 @@ def write_risk_verdict_entry(
                 "final_qty": risk_verdict.final_qty,
                 "final_stop": risk_verdict.final_stop,
                 "veto_reason": risk_verdict.veto_reason.value
-                if risk_verdict.veto_reason is not VetoReason.NONE
+                if risk_verdict.veto_reason is not None
                 else None,
                 "checks": risk_verdict.checks,
             }
@@ -284,9 +290,10 @@ def write_risk_verdict_entry(
 
 # --- KiteAdapter write: order result hand-off ---
 
+
 def write_order_result_entry(
     proposal_entry_id: str,
-    order_result: Dict[str, Any],
+    order_result: dict[str, Any],
 ) -> str:
     """Write an order result entry to the ledger, hand-off from KiteAdapter.
 
@@ -308,7 +315,7 @@ def write_order_result_entry(
     return proposal_entry_id
 
 
-def _calculate_pnl(entry: Dict[str, Any]) -> None:
+def _calculate_pnl(entry: dict[str, Any]) -> None:
     """Calculate and store P&L for a completed trade.
 
     P&L = (exit_price - entry_price) * quantity for long,
@@ -326,7 +333,6 @@ def _calculate_pnl(entry: Dict[str, Any]) -> None:
     exit_price = order_result.get("exit_price") or fill_price
     quantity = order_result.get("quantity", 0)
     action = entry.get("decision_proposal", {}).get("action", "BUY")
-    decision_conf = entry.get("decision_proposal", {}).get("confidence", 0.5)
 
     if fill_price is None or exit_price is None:
         entry["pnl"] = None
@@ -340,7 +346,7 @@ def _calculate_pnl(entry: Dict[str, Any]) -> None:
         entry["pnl"] = None
 
 
-def _rewrite_ledger(entries: List[Dict[str, Any]]) -> None:
+def _rewrite_ledger(entries: list[dict[str, Any]]) -> None:
     """Rewrite the entire ledger file from a list of entries."""
     _ensure_ledger_dir()
     with open(LEDGER_FILE, "w", encoding="utf-8") as f:
@@ -350,11 +356,12 @@ def _rewrite_ledger(entries: List[Dict[str, Any]]) -> None:
 
 # --- Ledger query: read for evaluation and review ---
 
+
 def get_ledger_entries(
-    filter_regime: Optional[List[str]] = None,
-    filter_start: Optional[datetime] = None,
-    filter_end: Optional[datetime] = None,
-) -> List[Dict[str, Any]]:
+    filter_regime: list[str] | None = None,
+    filter_start: datetime | None = None,
+    filter_end: datetime | None = None,
+) -> list[dict[str, Any]]:
     """Read ledger entries with optional filtering.
 
     Args:
@@ -368,7 +375,7 @@ def get_ledger_entries(
     if not os.path.exists(LEDGER_FILE):
         return []
 
-    with open(LEDGER_FILE, "r", encoding="utf-8") as f:
+    with open(LEDGER_FILE, encoding="utf-8") as f:
         lines = f.readlines()
 
     entries = []
@@ -406,11 +413,11 @@ def get_ledger_entries(
 
 def _as_utc(timestamp: datetime) -> datetime:
     if timestamp.tzinfo is None:
-        return timestamp.replace(tzinfo=timezone.utc)
-    return timestamp.astimezone(timezone.utc)
+        return timestamp.replace(tzinfo=UTC)
+    return timestamp.astimezone(UTC)
 
 
-def get_ledger_stats() -> Dict[str, Any]:
+def get_ledger_stats() -> dict[str, Any]:
     """Get statistics about the ledger.
 
     Returns:
@@ -429,7 +436,7 @@ def get_ledger_stats() -> Dict[str, Any]:
     total = len(entries)
 
     # Regime distribution
-    regime_dist: Dict[str, int] = {}
+    regime_dist: dict[str, int] = {}
     for entry in entries:
         for regime in entry.get("regime_flags", []):
             regime_dist[regime] = regime_dist.get(regime, 0) + 1
@@ -451,13 +458,15 @@ def get_ledger_stats() -> Dict[str, Any]:
             completed += 1
 
     # Find most common regime
-    most_common_regime = max(regime_dist, key=regime_dist.get) if regime_dist else "none"
+    most_common_regime = max(regime_dist, key=lambda k: regime_dist[k]) if regime_dist else "none"
 
     return {
         "total_entries": total,
         "regime_distribution": regime_dist,
         "most_common_regime": most_common_regime,
-        "confidence_range": f"{min(confidences):.2f}-{max(confidences):.2f}" if confidences else "0.0-1.0",
+        "confidence_range": f"{min(confidences):.2f}-{max(confidences):.2f}"
+        if confidences
+        else "0.0-1.0",
         "total_pnl": pnl_total,
         "completed_trades": completed,
         "avg_pnl": pnl_total / completed if completed > 0 else 0.0,

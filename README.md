@@ -70,4 +70,26 @@ CI (`.github/workflows/ci.yml`) runs pytest with coverage, `ruff check .`, `ruff
 - Issues and specs live in GitHub Issues for `SuryaVamsi009/ATLAS` (use the `gh` CLI; see `docs/agents/issue-tracker.md`).
 - Triage labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` (see `docs/agents/triage-labels.md`).
 - Domain docs: single-context repo; use the terminology above and `docs/adr/` when present (see `docs/agents/domain.md`).
-- `ATLAS_NEXT_STEPS.md` and `DISASTER_RECOVERY.md` describe the archived 6-layer trading core and are outdated; see the final cleanup report for details.
+
+### Screener Enhancements
+- Extend `atlas/quant/strategies.py` with additional signal generators (ORB, VWAP reversion, gap fade).
+- Add purged walk-forward validation in `atlas/eval_set.py` with hold-out periods and trial log (`quant/trials.jsonl`).
+- Implement deflated Sharpe and 2× cost stress testing for strategy validation.
+- Connect `eval_set.py` to read from journal ledger (`.journal/ledger.jsonl`) for confidence calibration (hit rates by confidence bin, R-multiple averages).
+
+### Data Quality
+- Complete 1-minute collector for Nifty 50 → partitioned parquet in `atlas/quant/data.py`.
+- Add quality checks: gap detection, duplicate removal, timezone validation.
+
+### Monitoring & Observability
+- Add per-cycle metrics tracking (duration, API calls, veto reason distribution, P&L summary).
+- CLI summary and JSON output for scheduled job health.
+
+## Recovery
+
+- **Canonical restore point:** Git tag `archive/pre-cleanup-2026-11-14` contains the full 6-layer trading core (orchestrator, research_ai, risk_verdict, rag_corpus, brokers/kite_adapter) before cleanup.
+- **Journal ledger:** Local JSONL at `.journal/ledger.jsonl` — back up daily to encrypted storage outside GitHub; not committed to repo.
+- **Market-scan reports:** Committed under `market-scan/`; retained in Git history and any repository mirror.
+- **GitHub Actions:** Schedules defined in `.github/workflows/` (ci.yml, daily-market-scan.yml); recreate via workflow dispatch if Actions outage.
+- **Rebuild:** Python 3.11+, `pip install -e ".[dev]"`, then `pytest -q` and `python scripts/daily_market_scan.py`.
+- **Paper-trading invariant:** `OrchestratorConfig` (when present) defaults to `paper_trading=True`; risk checks must remain in the execution path; no recovery test enables live orders.
