@@ -111,8 +111,8 @@ class TestDecisionProposal:
             rationale="Test",
         )
         # All fields should be accessible
-        assert hasattr(proposal, 'action')
-        assert hasattr(proposal, 'confidence')
-        assert hasattr(proposal, 'size_hint')
-        assert hasattr(proposal, 'stop_hint')
-        assert hasattr(proposal, 'rationale')
+        assert hasattr(proposal, "action")
+        assert hasattr(proposal, "confidence")
+        assert hasattr(proposal, "size_hint")
+        assert hasattr(proposal, "stop_hint")
+        assert hasattr(proposal, "rationale")

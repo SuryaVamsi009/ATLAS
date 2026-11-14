@@ -31,13 +31,12 @@ Pacman "eats" through the codebase methodically, finding bugs for Ben to fix. Th
 Pacman traverses the codebase in a structured order:
 
 ```
-L1 Data Ingestion     → atlas/brokers/, data loaders
-L2 State Computation  → state_snapshot.py
-L3 Research AI        → research_ai.py, rag_corpus.py
-L4 Risk & Decisions   → risk_verdict.py, decision_proposal.py
-L5 Execution          → orchestrator.py, brokers/
-L6 Journal & Eval     → journal.py, eval_set.py, eval_pipeline.py
-Cross-cutting         → functions.py, config/, tests/
+L1 Data Ingestion     → atlas/quant/data.py
+L2 State Computation  → atlas/state_snapshot.py
+L3 Strategy Signals   → atlas/quant/strategies.py, atlas/quant/features.py
+L4 Decisions          → atlas/decision_proposal.py
+L5 Journal & Eval     → atlas/journal.py, atlas/eval_set.py
+Cross-cutting         → atlas/functions.py, config/, tests/
 ```
 
 ### 2. Bug Class Detection Patterns
@@ -63,25 +62,16 @@ Cross-cutting         → functions.py, config/, tests/
 - trend_slope: single bar instead of N bars
 - Missing required indicator keys validation
 
-#### RiskVerdict Bugs
-- Inverted `VetoReason.__bool__`
-- Risk calculation: not `(entry - stop) * qty`
-- Not using `account.daily_pnl`
-- Weekly limit branch unreachable
-- `final_qty` as rupee amount not shares
-- Missing ATR-based stop_hint
+#### DecisionProposal Bugs
+- Missing required fields
+- Invalid confidence values
+- Type mismatches in proposal structure
 
 #### Journal Bugs
 - In-memory only, not JSONL persistence
-- Missing required 12 fields
+- Missing required fields
 - `timestamp_ist` instead of proper timezone-aware timestamps
-- Risk-rejected cycles not logged
-
-#### Orchestrator Bugs
-- `api_call_count` NameError (not in scope)
-- Missing `import time`
-- Stop price not passed to broker adapter
-- Not writing all cycles to journal
+- Rejected cycles not logged
 
 #### Eval/Metrics Bugs
 - `hits`/`total_r` not incremented in loop
@@ -129,19 +119,19 @@ For each bug found, Pacman produces:
 ### Layer Contracts (Violations = Bugs)
 | Layer | Module | Must Follow |
 |-------|--------|-------------|
-| L1 | Data ingestion | Produce raw bars, no computation |
-| L2 | state_snapshot.py | Frozen dataclass, all values computed in Python |
-| L3 | research_ai.py | No order placement, only regime_flags + event_alerts |
-| L4 | risk_verdict.py | 5 checks all pass, no model places orders |
-| L5 | orchestrator.py | Two-AI boundary respected, journal every cycle |
-| L6 | journal.py | Append-only JSONL, 12 required fields |
+| L1 | atlas/quant/data.py | Produce raw bars, no computation |
+| L2 | atlas/state_snapshot.py | Frozen dataclass, all values computed in Python |
+| L3 | atlas/quant/strategies.py | Strategy signals, feature calculations |
+| L4 | atlas/decision_proposal.py | Structured hand-off, no order placement |
+| L5 | atlas/journal.py | Append-only JSONL, required fields |
+| L6 | atlas/eval_set.py | Evaluation, walk-forward validation |
 
 ### Code Patterns (Violations = Bugs)
 - ✅ `from atlas.module import` (package imports)
 - ✅ `zoneinfo.ZoneInfo("Asia/Kolkata")` (timezone)
 - ✅ `from typing import Any` (type hints)
 - ✅ Heavy imports inside functions
-- ✅ Frozen dataclasses for StateSnapshot, JournalEntry, RiskVerdict
+- ✅ Frozen dataclasses for StateSnapshot, JournalEntry, DecisionProposal
 - ✅ Append-only journal writes
 - ❌ `sys.path` manipulation
 - ❌ `datetime.utcnow()` without timezone
@@ -176,12 +166,6 @@ grep -rn "timestamp_ist" atlas/
 
 # Find missing typing imports
 grep -rn "def.*context.*dict\[str" atlas/ | grep -v "from typing import"
-
-# Find VetoReason.__bool__
-grep -rn "__bool__" atlas/risk_verdict.py
-
-# Find api_call_count usage
-grep -rn "api_call_count" atlas/orchestrator.py
 ```
 
 ### Test Gap Analysis
@@ -203,7 +187,6 @@ grep -rn "api_call_count" atlas/orchestrator.py
 
 ### Triggers
 - Manual invocation: "Pacman, scan the codebase for bugs"
-- Scheduled: Daily/weekly full scan
 - Pre-PR: "Pacman, scan changed files"
 - Post-Ben-fix: "Pacman, verify fixes for issues #5-#18"
 
@@ -218,11 +201,11 @@ grep -rn "api_call_count" atlas/orchestrator.py
 
 ### Targeted Layer Scan
 ```
-"Pacman, scan L4 (Risk & Decisions) specifically.
- Check risk_verdict.py and decision_proposal.py for:
- - Risk calculation bugs
- - VetoReason issues
- - Missing checks
+"Pacman, scan L4 (Decisions) specifically.
+ Check decision_proposal.py for:
+ - Missing required fields
+ - Invalid confidence values
+ - Type mismatches
  - Import problems"
 ```
 
@@ -255,13 +238,12 @@ bugs/found/
 │   ├── imports.md
 │   ├── timezone.md
 │   ├── rsi.md
-│   ├── risk_checks.md
+│   ├── decision_proposal.md
 │   ├── journal.md
-│   ├── orchestrator.md
 │   ├── eval_metrics.md
 │   └── test_gaps.md
-├── 2026-11-05_L4_risk/
-│   └── risk_verdict_bugs.md
+├── 2026-11-05_L4_decisions/
+│   └── decision_proposal_bugs.md
 └── index.md  # Summary of all found bugs
 ```
 
@@ -283,8 +265,8 @@ bugs/found/
 | L2    | 3        | 4    | 2      | 1   |
 | L3    | 2        | 3    | 1      | 1   |
 | L4    | 4        | 5    | 3      | 2   |
-| L5    | 1        | 2    | 3      | 1   |
-| L6    | 1        | 2    | 2      | 0   |
+| L5    | 1        | 2    | 2      | 0   |
+| L6    | 1        | 2    | 1      | 0   |
 
 ## By Bug Class
 | Class | Count | Files |

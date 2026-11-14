@@ -2,9 +2,9 @@ name: CI (pytest)
 
 on:
   push:
-    branches: [main]
+    branches: [Mark-2]
   pull_request:
-    branches: [main]
+    branches: [Mark-2]
 
 permissions:
   contents: read

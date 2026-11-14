@@ -8,53 +8,55 @@ Bar format: [timestamp_ms, open, high, low, close, volume]
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Any
 
 import numpy as np
-
+import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
 
-def _extract_closes(bars: List[List[float]]) -> np.ndarray:
+
+def _extract_closes(bars: list[list[float]]) -> np.ndarray:
     """Extract close prices from bars."""
     return np.array([bar[4] for bar in bars], dtype=np.float64)
 
 
-def _extract_highs(bars: List[List[float]]) -> np.ndarray:
+def _extract_highs(bars: list[list[float]]) -> np.ndarray:
     """Extract high prices from bars."""
     return np.array([bar[2] for bar in bars], dtype=np.float64)
 
 
-def _extract_lows(bars: List[List[float]]) -> np.ndarray:
+def _extract_lows(bars: list[list[float]]) -> np.ndarray:
     """Extract low prices from bars."""
     return np.array([bar[3] for bar in bars], dtype=np.float64)
 
 
-def _extract_opens(bars: List[List[float]]) -> np.ndarray:
+def _extract_opens(bars: list[list[float]]) -> np.ndarray:
     """Extract open prices from bars."""
     return np.array([bar[1] for bar in bars], dtype=np.float64)
 
 
-def _extract_volumes(bars: List[List[float]]) -> np.ndarray:
+def _extract_volumes(bars: list[list[float]]) -> np.ndarray:
     """Extract volumes from bars."""
     return np.array([bar[5] for bar in bars], dtype=np.float64)
 
 
-def _extract_typical_price(bars: List[List[float]]) -> np.ndarray:
+def _extract_typical_price(bars: list[list[float]]) -> np.ndarray:
     """Extract typical price (H+L+C)/3 from bars."""
     highs = _extract_highs(bars)
     lows = _extract_lows(bars)
     closes = _extract_closes(bars)
-    return (highs + lows + closes) / 3.0
+    return (highs + lows + closes) / 3.0  # type: ignore
 
 
 # ---------------------------------------------------------------------------
 # RSI (Relative Strength Index)
 # ---------------------------------------------------------------------------
 
-def rsi(bars: List[List[float]], period: int = 14) -> np.ndarray:
+
+def rsi(bars: list[list[float]], period: int = 14) -> np.ndarray:
     """Calculate Relative Strength Index (RSI).
 
     Args:
@@ -103,7 +105,8 @@ def rsi(bars: List[List[float]], period: int = 14) -> np.ndarray:
 # EMA (Exponential Moving Average)
 # ---------------------------------------------------------------------------
 
-def ema(bars: List[List[float]], period: int = 20, price_type: str = "close") -> np.ndarray:
+
+def ema(bars: list[list[float]], period: int = 20, price_type: str = "close") -> np.ndarray:
     """Calculate Exponential Moving Average (EMA).
 
     Args:
@@ -148,7 +151,8 @@ def ema(bars: List[List[float]], period: int = 20, price_type: str = "close") ->
 # ATR (Average True Range)
 # ---------------------------------------------------------------------------
 
-def atr(bars: List[List[float]], period: int = 14) -> np.ndarray:
+
+def atr(bars: list[list[float]], period: int = 14) -> np.ndarray:
     """Calculate Average True Range (ATR).
 
     Args:
@@ -179,7 +183,7 @@ def atr(bars: List[List[float]], period: int = 14) -> np.ndarray:
     atr_values = np.full(len(bars), np.nan)
 
     # First ATR is simple average of first `period` TR values
-    atr_values[period] = np.mean(tr[1:period + 1])
+    atr_values[period] = np.mean(tr[1 : period + 1])
 
     # Wilder's smoothing
     for i in range(period + 1, len(bars)):
@@ -192,7 +196,8 @@ def atr(bars: List[List[float]], period: int = 14) -> np.ndarray:
 # VWAP (Volume Weighted Average Price)
 # ---------------------------------------------------------------------------
 
-def vwap(bars: List[List[float]], anchor: Optional[int] = None) -> np.ndarray:
+
+def vwap(bars: list[list[float]], anchor: int | None = None) -> np.ndarray:
     """Calculate Volume Weighted Average Price (VWAP).
 
     Args:
@@ -213,23 +218,23 @@ def vwap(bars: List[List[float]], anchor: Optional[int] = None) -> np.ndarray:
 
     if anchor is not None and 0 <= anchor < len(bars):
         # Anchored VWAP from anchor point
-        cum_pv = 0.0
-        cum_vol = 0.0
+        cum_pv: float = 0.0
+        cum_vol: float = 0.0
         for i in range(anchor, len(bars)):
-            cum_pv += typical_prices[i] * volumes[i]
-            cum_vol += volumes[i]
+            cum_pv += float(typical_prices[i]) * float(volumes[i])
+            cum_vol += float(volumes[i])
             if cum_vol > 0:
                 vwap_values[i] = cum_pv / cum_vol
     else:
         # Cumulative VWAP from start
-        cum_pv = np.cumsum(typical_prices * volumes)
-        cum_vol = np.cumsum(volumes)
-        vwap_values = np.where(cum_vol > 0, cum_pv / cum_vol, np.nan)
+        cum_pv_arr: np.ndarray = np.cumsum(typical_prices * volumes)
+        cum_vol_arr: np.ndarray = np.cumsum(volumes)
+        vwap_values = np.where(cum_vol_arr > 0, cum_pv_arr / cum_vol_arr, np.nan)  # type: ignore[assignment]
 
     return vwap_values
 
 
-def session_vwap(bars: List[List[float]], session_start_idx: int = 0) -> np.ndarray:
+def session_vwap(bars: list[list[float]], session_start_idx: int = 0) -> np.ndarray:
     """Calculate session VWAP anchored at session start.
 
     Args:
@@ -246,11 +251,12 @@ def session_vwap(bars: List[List[float]], session_start_idx: int = 0) -> np.ndar
 # Opening Range
 # ---------------------------------------------------------------------------
 
+
 def opening_range(
-    bars: List[List[float]],
+    bars: list[list[float]],
     range_minutes: int = 15,
     session_start_time: str = "09:15",
-) -> Tuple[float, float, int, int]:
+) -> tuple[float, float, int, int]:
     """Calculate opening range high/low for the first N minutes.
 
     Args:
@@ -290,10 +296,10 @@ def opening_range(
 
 
 def opening_range_breakout(
-    bars: List[List[float]],
+    bars: list[list[float]],
     range_minutes: int = 15,
     session_start_time: str = "09:15",
-) -> Tuple[Optional[str], float, float]:
+) -> tuple[str | None, float, float]:
     """Detect opening range breakout.
 
     Args:
@@ -328,7 +334,8 @@ def opening_range_breakout(
 # Gap Detection
 # ---------------------------------------------------------------------------
 
-def gap(bars: List[List[float]], prev_close: Optional[float] = None) -> Tuple[float, str]:
+
+def gap(bars: list[list[float]], prev_close: float | None = None) -> tuple[float, str]:
     """Calculate gap from previous close to current open.
 
     Args:
@@ -366,7 +373,7 @@ def gap(bars: List[List[float]], prev_close: Optional[float] = None) -> Tuple[fl
         return (gap_pct, "no_gap")
 
 
-def overnight_gap(bars: List[List[float]], prev_day_close: float) -> Tuple[float, str]:
+def overnight_gap(bars: list[list[float]], prev_day_close: float) -> tuple[float, str]:
     """Calculate overnight gap from previous day's close to today's open.
 
     Args:
@@ -383,7 +390,8 @@ def overnight_gap(bars: List[List[float]], prev_day_close: float) -> Tuple[float
 # Additional Features
 # ---------------------------------------------------------------------------
 
-def sma(bars: List[List[float]], period: int = 20, price_type: str = "close") -> np.ndarray:
+
+def sma(bars: list[list[float]], period: int = 20, price_type: str = "close") -> np.ndarray:
     """Simple Moving Average."""
     if len(bars) < period:
         return np.full(len(bars), np.nan)
@@ -403,17 +411,17 @@ def sma(bars: List[List[float]], period: int = 20, price_type: str = "close") ->
 
     sma_values = np.full(len(bars), np.nan)
     for i in range(period - 1, len(bars)):
-        sma_values[i] = np.mean(prices[i - period + 1:i + 1])
+        sma_values[i] = np.mean(prices[i - period + 1 : i + 1])
 
     return sma_values
 
 
 def bollinger_bands(
-    bars: List[List[float]],
+    bars: list[list[float]],
     period: int = 20,
     num_std: float = 2.0,
     price_type: str = "close",
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Bollinger Bands (middle, upper, lower)."""
     middle = sma(bars, period, price_type)
     std = np.full(len(bars), np.nan)
@@ -426,7 +434,7 @@ def bollinger_bands(
         prices = _extract_closes(bars)
 
     for i in range(period - 1, len(bars)):
-        std[i] = np.std(prices[i - period + 1:i + 1])
+        std[i] = np.std(prices[i - period + 1 : i + 1])
 
     upper = middle + num_std * std
     lower = middle - num_std * std
@@ -435,11 +443,11 @@ def bollinger_bands(
 
 
 def macd(
-    bars: List[List[float]],
+    bars: list[list[float]],
     fast_period: int = 12,
     slow_period: int = 26,
     signal_period: int = 9,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """MACD (macd_line, signal_line, histogram)."""
     fast_ema = ema(bars, fast_period)
     slow_ema = ema(bars, slow_period)
@@ -452,7 +460,7 @@ def macd(
     if valid_start < len(bars):
         # First signal is SMA of first `signal_period` MACD values
         first_valid = max(fast_period, slow_period) - 1
-        signal_line[valid_start] = np.mean(macd_line[first_valid:valid_start + 1])
+        signal_line[valid_start] = np.mean(macd_line[first_valid : valid_start + 1])
 
         alpha = 2.0 / (signal_period + 1.0)
         for i in range(valid_start + 1, len(bars)):
@@ -465,10 +473,10 @@ def macd(
 
 
 def stochastic(
-    bars: List[List[float]],
+    bars: list[list[float]],
     k_period: int = 14,
     d_period: int = 3,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Stochastic Oscillator (%K, %D)."""
     if len(bars) < k_period:
         return (np.full(len(bars), np.nan), np.full(len(bars), np.nan))
@@ -480,8 +488,8 @@ def stochastic(
     k_values = np.full(len(bars), np.nan)
 
     for i in range(k_period - 1, len(bars)):
-        highest_high = np.max(highs[i - k_period + 1:i + 1])
-        lowest_low = np.min(lows[i - k_period + 1:i + 1])
+        highest_high = np.max(highs[i - k_period + 1 : i + 1])
+        lowest_low = np.min(lows[i - k_period + 1 : i + 1])
 
         if highest_high != lowest_low:
             k_values[i] = 100.0 * (closes[i] - lowest_low) / (highest_high - lowest_low)
@@ -491,7 +499,7 @@ def stochastic(
     # %D is SMA of %K
     d_values = np.full(len(bars), np.nan)
     for i in range(k_period - 1 + d_period - 1, len(bars)):
-        d_values[i] = np.mean(k_values[i - d_period + 1:i + 1])
+        d_values[i] = np.mean(k_values[i - d_period + 1 : i + 1])
 
     return k_values, d_values
 
@@ -500,7 +508,8 @@ def stochastic(
 # Compute all features at once (for StateSnapshot)
 # ---------------------------------------------------------------------------
 
-def compute_all_features(bars: List[List[float]]) -> dict:
+
+def compute_all_features(bars: list[list[float]]) -> dict:
     """Compute all technical features for a bar series.
 
     Returns a dict with all indicator arrays, aligned to bar indices.
@@ -517,7 +526,7 @@ def compute_all_features(bars: List[List[float]]) -> dict:
     if not bars:
         return {}
 
-    features = {}
+    features: dict[str, Any] = {}
 
     # RSI
     features["rsi"] = rsi(bars, 14).tolist()
@@ -560,7 +569,3 @@ def compute_all_features(bars: List[List[float]]) -> dict:
     features["gap_type"] = gap_type
 
     return features
-
-
-# Need pandas for timestamp conversion in opening_range
-import pandas as pd

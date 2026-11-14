@@ -68,44 +68,33 @@ Ben is trained on the complete ATLAS codebase, the 35 known bugs (GitHub issues 
 
 ## ATLAS Protocol Knowledge (Internalized)
 
-### Layer Contracts
+### Layer Contracts (Current Tree)
 | Layer | Module | Responsibility |
 |-------|--------|----------------|
-| L1 | `atlas/brokers/`, data loaders | Data ingestion, market data |
-| L2 | `state_snapshot.py` | StateSnapshot computation |
-| L3 | `research_ai.py`, `rag_corpus.py` | Research AI, regime detection |
-| L4 | `risk_verdict.py`, `decision_proposal.py` | Risk validation, decision proposals |
-| L5 | `orchestrator.py`, `brokers/` | Order placement, execution |
-| L6 | `journal.py`, `eval_set.py`, `eval_pipeline.py` | Journaling, evaluation, backtesting |
+| L1 | `atlas/quant/data.py` | Data ingestion, market data loaders |
+| L2 | `atlas/state_snapshot.py` | StateSnapshot computation (indicators, regime features) |
+| L3 | `atlas/quant/strategies.py`, `atlas/quant/features.py` | Strategy signals, feature calculations |
+| L4 | `atlas/decision_proposal.py` | Decision proposals (structured hand-off) |
+| L5 | `atlas/journal.py` | Journaling, audit trail (JSONL) |
+| L6 | `atlas/eval_set.py` | Evaluation, backtesting, walk-forward validation |
 
 ### Key Patterns
 - **StateSnapshot**: Frozen dataclass — only thing models see; all values computed in Python
 - **JournalEntry**: Append-only JSONL with 12 required fields
-- **RiskVerdict**: 5 checks (size_ok, loss_ok, hours_ok, symbol_ok, confidence_ok) — all must pass
-- **Two-AI Boundary**: Research AI proposes, RiskVerdict disposes — no model places orders
+- **DecisionProposal**: Structured hand-off between analysis and execution
 - **Imports**: Always use `from atlas.module import` (package imports)
 - **Timezone**: Use `zoneinfo.ZoneInfo("Asia/Kolkata")` for IST
 - **Heavy imports**: Move `yfinance`, `pandas`, etc. inside functions
 
-## Known Bug Database (35 Issues)
+## Known Bug Database (Current Issues)
 
 ### High Priority (GitHub #5-#22, Jira KAN-9 to KAN-22)
 | Issue | File | Bug Summary |
 |-------|------|-------------|
 | #5 / KAN-9 | `eval_set.py` | Import fixes, yfinance inside functions |
-| #6 / KAN-10 | `risk_verdict.py` | Package imports, remove sys.path, add typing |
-| #7 / KAN-11 | `research_ai.py` | Add logger, fix gpt-4o-minimum → gpt-4o-mini |
-| #8 / KAN-12 | `orchestrator.py` | Add import time, fix api_call_count NameError |
-| #9 / KAN-13 | `rag_corpus.py` | Import DecisionProposal under TYPE_CHECKING |
 | #10 / KAN-14 | `state_snapshot.py` | Wilder RSI over latest 14 bars, return 100 when avg_loss=0 |
 | #11 / KAN-15 | `state_snapshot.py` | Real EMAs, closes in ohlcv_tail, ATR with prev close, trend_slope over N bars |
 | #12 / KAN-16 | `eval_set.py` | Increment hits/total_r in loop, divide by own sample counts |
-| #13 / KAN-17 | `risk_verdict.py` | Remove inverted VetoReason.__bool__, test veto_reason is not NONE |
-| #14 / KAN-18 | `risk_verdict.py` | Risk = (entry-stop)*qty, use account.daily_pnl, fix weekly branch |
-| #15 / KAN-19 | `risk_verdict.py` | final_qty = floor(notional/price) not rupee amount |
-| #16 / KAN-20 | `orchestrator.py` | ATR-based stop_hint, pass stop_price to broker |
-| #17 / KAN-21 | `risk_verdict.py`, `kite_adapter.py`, `journal.py` | zoneinfo Asia/Kolkata, remove +5:30 hack |
-| #18 / KAN-22 | `orchestrator.py` | Write all cycles to journal JSONL |
 | #19 / KAN-23 | `tests/` | Phase 0 pytest tests |
 | #20 / KAN-24 | `pyproject.toml` | Add dependencies |
 | #21 / KAN-25 | `.gitignore` | Add __pycache__/, .journal/, .DS_Store |
@@ -120,12 +109,6 @@ Ben is trained on the complete ATLAS codebase, the 35 known bugs (GitHub issues 
 | #26 / KAN-30 | Data | Create atlas/quant/data/ loader interface + yfinance source |
 | #27 / KAN-31 | Data | 1-min collector for Nifty 50 → partitioned parquet |
 | #28 / KAN-32 | Data | Quality checks: gaps, duplicates, timezone errors |
-| #29 / KAN-33 | Backtest | Event-driven engine replaying bars through Orchestrator.run_cycle() |
-| #30 / KAN-34 | Backtest | Fill model: next bar open + slippage, force flat at close |
-| #31 / KAN-35 | Backtest | Indian cost stack in config |
-| #32 / KAN-36 | Backtest | Buy-and-hold + random-entry baselines |
-| #33 / KAN-37 | Eval | Delete generate_eval_set(), use real replayed bars |
-| #34 / KAN-38 | Backtest | Metrics: net PnL, drawdown, hit rate, avg R, turnover, cost drag at ₹2k/₹50k |
 | #35 / KAN-39 | Strategy | ORB strategy with Signal, hypothesis in docs/hypotheses.md |
 | #36 / KAN-40 | Validation | Purged walk-forward, hold-out, trial log (quant/trials.jsonl) |
 | #37 / KAN-41 | Validation | Deflated Sharpe, 2x costs, parameter plateau check |
@@ -215,8 +198,6 @@ Ben is trained on the complete ATLAS codebase, the 35 known bugs (GitHub issues 
 ### Triggers
 - Manual invocation: "Ben, fix issue #10"
 - GitHub issue labeled `bug` + `atlas`
-- Jira ticket assigned to Ben
-- Scheduled bug bash sessions
 
 ## Usage Examples
 
@@ -229,7 +210,7 @@ Ben is trained on the complete ATLAS codebase, the 35 known bugs (GitHub issues 
 
 ### Fix Multiple Related Bugs
 ```
-"Ben, fix the timezone handling bugs (#17/KAN-21) across risk_verdict.py, kite_adapter.py, and journal.py.
+"Ben, fix the timezone handling bugs (#17/KAN-21) in journal.py.
  Use zoneinfo.ZoneInfo('Asia/Kolkata'). Remove +5:30 hacks.
  Validate with existing tests."
 ```
