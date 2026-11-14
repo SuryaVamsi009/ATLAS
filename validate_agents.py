@@ -12,6 +12,7 @@ import yaml
 AGENTS_DIR = Path(__file__).parent / ".github" / "agents"
 REQUIRED_FIELDS = ["name", "description", "tools"]
 
+
 def validate_frontmatter(filepath):
     """Validate YAML frontmatter in agent markdown file."""
     try:
@@ -19,11 +20,11 @@ def validate_frontmatter(filepath):
             content = f.read()
 
         # Check if file starts with ---
-        if not content.startswith('---'):
+        if not content.startswith("---"):
             return False, "Missing frontmatter delimiter (---)"
 
         # Extract frontmatter
-        parts = content.split('---', 2)
+        parts = content.split("---", 2)
         if len(parts) < 3:
             return False, "Incomplete frontmatter"
 
@@ -48,6 +49,7 @@ def validate_frontmatter(filepath):
         return False, f"YAML parse error: {e}"
     except Exception as e:
         return False, f"Error: {e}"
+
 
 def validate_all_agents():
     """Validate all agent files in the agents directory."""
@@ -75,12 +77,14 @@ def validate_all_agents():
 
     return all_valid
 
+
 def test_agent_loading():
     """Test that agents can be loaded (placeholder for actual load test)."""
     print("\nTesting agent loading...")
     print("Note: Actual load test requires Copilot CLI/UI")
     print("Run: copilot agent list  # to verify agents load")
     return True
+
 
 if __name__ == "__main__":
     print("ATLAS Agent Validation")

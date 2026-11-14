@@ -20,6 +20,7 @@ def create_test_bars(n: int = 60, start_price: float = 100.0, seed: int = 42) ->
     Format: [timestamp_ms, open, high, low, close, volume]
     """
     import pandas as pd
+
     rng = np.random.default_rng(seed)
     base_time = pd.Timestamp("2026-11-01 09:15", tz="Asia/Kolkata").timestamp() * 1000
     bars = []
@@ -163,7 +164,7 @@ class TestORBStrategy:
         # Set up opening range (first 15 bars)
         for i in range(15):
             bars[i][2] = 101.0  # high
-            bars[i][3] = 99.0   # low
+            bars[i][3] = 99.0  # low
             bars[i][5] = 1000.0  # volume
 
         # Breakout on LAST bar (bar 59) - high breaks above OR high with volume
@@ -191,8 +192,8 @@ class TestORBStrategy:
         # Breakdown on LAST bar - low breaks below OR low
         # Set high to NOT break above OR high (101.0), so only short breakdown triggers
         bars[-1][2] = 100.5  # high <= or_high (101.0)
-        bars[-1][3] = 98.0   # low < or_low (99.0)
-        bars[-1][4] = 98.5   # close
+        bars[-1][3] = 98.0  # low < or_low (99.0)
+        bars[-1][4] = 98.5  # close
         bars[-1][5] = 2000.0
 
         signal = strat.generate_signal("RELIANCE.NS", bars, current_position=0)
@@ -228,6 +229,7 @@ class TestORBStrategy:
         bars = create_test_bars(60, 100.0)
         # Set last bar to 15:15 IST
         import pandas as pd
+
         close_time = pd.Timestamp("2026-11-01 15:15", tz="Asia/Kolkata").timestamp() * 1000
         bars[-1][0] = close_time
 
@@ -321,7 +323,9 @@ class TestGapFadeStrategy:
         bars[1][4] = 101.6  # close < open (red candle)
         bars[1][3] = 101.4  # low
 
-        signal = strat.generate_signal("RELIANCE.NS", bars, current_position=0, prev_day_close=100.0)
+        signal = strat.generate_signal(
+            "RELIANCE.NS", bars, current_position=0, prev_day_close=100.0
+        )
         if signal:
             assert signal.direction == Direction.SHORT
             assert signal.metadata["gap_type"] == "gap_up"
@@ -342,7 +346,9 @@ class TestGapFadeStrategy:
         bars[1][4] = 98.4  # close > open (green candle)
         bars[1][2] = 98.6  # high
 
-        signal = strat.generate_signal("RELIANCE.NS", bars, current_position=0, prev_day_close=100.0)
+        signal = strat.generate_signal(
+            "RELIANCE.NS", bars, current_position=0, prev_day_close=100.0
+        )
         if signal:
             assert signal.direction == Direction.LONG
             assert signal.metadata["gap_type"] == "gap_down"
@@ -355,7 +361,9 @@ class TestGapFadeStrategy:
         bars[0][1] = 100.5  # open
         bars[0][4] = 100.4  # close
 
-        signal = strat.generate_signal("RELIANCE.NS", bars, current_position=0, prev_day_close=100.0)
+        signal = strat.generate_signal(
+            "RELIANCE.NS", bars, current_position=0, prev_day_close=100.0
+        )
         assert signal is None
 
 

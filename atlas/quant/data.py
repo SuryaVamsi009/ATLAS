@@ -24,6 +24,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="yfinance")
 # Data Loader Interface
 # ---------------------------------------------------------------------------
 
+
 class DataLoader(abc.ABC):
     """Abstract base class for data loaders.
 
@@ -61,6 +62,7 @@ class DataLoader(abc.ABC):
 # ---------------------------------------------------------------------------
 # YFinance Loader Implementation
 # ---------------------------------------------------------------------------
+
 
 class YFinanceLoader(DataLoader):
     """YFinance data loader for intraday and daily data.
@@ -133,7 +135,9 @@ class YFinanceLoader(DataLoader):
 
         # Validate timeframe
         if timeframe not in self.TIMEFRAME_MAP:
-            raise ValueError(f"Unsupported timeframe: {timeframe}. Supported: {list(self.TIMEFRAME_MAP.keys())}")
+            raise ValueError(
+                f"Unsupported timeframe: {timeframe}. Supported: {list(self.TIMEFRAME_MAP.keys())}"
+            )
 
         yf_interval = self.TIMEFRAME_MAP[timeframe]
 
@@ -167,16 +171,20 @@ class YFinanceLoader(DataLoader):
                     ts_ms = int(idx.timestamp() * 1000)
                 else:
                     # Assume UTC if naive
-                    ts_ms = int(idx.replace(tzinfo=datetime.utcnow().astimezone().tzinfo).timestamp() * 1000)
+                    ts_ms = int(
+                        idx.replace(tzinfo=datetime.utcnow().astimezone().tzinfo).timestamp() * 1000
+                    )
 
-                bars.append([
-                    ts_ms,
-                    float(row["Open"]),
-                    float(row["High"]),
-                    float(row["Low"]),
-                    float(row["Close"]),
-                    float(row["Volume"]),
-                ])
+                bars.append(
+                    [
+                        ts_ms,
+                        float(row["Open"]),
+                        float(row["High"]),
+                        float(row["Low"]),
+                        float(row["Close"]),
+                        float(row["Volume"]),
+                    ]
+                )
 
             # Cache if enabled
             if self.cache_dir and bars:
@@ -192,16 +200,54 @@ class YFinanceLoader(DataLoader):
         """Get list of available symbols (Nifty 50 components + index)."""
         # Nifty 50 symbols with .NS suffix for yfinance
         nifty50 = [
-            "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS",
-            "HINDUNILVR.NS", "ITC.NS", "SBIN.NS", "BHARTIARTL.NS", "KOTAKBANK.NS",
-            "LT.NS", "AXISBANK.NS", "ASIANPAINT.NS", "MARUTI.NS", "SUNPHARMA.NS",
-            "TITAN.NS", "ULTRACEMCO.NS", "WIPRO.NS", "NESTLEIND.NS", "POWERGRID.NS",
-            "NTPC.NS", "TECHM.NS", "TATAMOTORS.NS", "BAJFINANCE.NS", "HCLTECH.NS",
-            "ADANIENT.NS", "ADANIPORTS.NS", "COALINDIA.NS", "GRASIM.NS", "JSWSTEEL.NS",
-            "ONGC.NS", "BPCL.NS", "CIPLA.NS", "DRREDDY.NS", "EICHERMOT.NS",
-            "HEROMOTOCO.NS", "INDUSINDBK.NS", "BAJAJFINSV.NS", "TATACONSUM.NS",
-            "DIVISLAB.NS", "APOLLOHOSP.NS", "BRITANNIA.NS", "SHRIRAMFIN.NS",
-            "SBILIFE.NS", "HDFCLIFE.NS", "M&M.NS", "TATASTEEL.NS", "HINDALCO.NS",
+            "RELIANCE.NS",
+            "TCS.NS",
+            "HDFCBANK.NS",
+            "ICICIBANK.NS",
+            "INFY.NS",
+            "HINDUNILVR.NS",
+            "ITC.NS",
+            "SBIN.NS",
+            "BHARTIARTL.NS",
+            "KOTAKBANK.NS",
+            "LT.NS",
+            "AXISBANK.NS",
+            "ASIANPAINT.NS",
+            "MARUTI.NS",
+            "SUNPHARMA.NS",
+            "TITAN.NS",
+            "ULTRACEMCO.NS",
+            "WIPRO.NS",
+            "NESTLEIND.NS",
+            "POWERGRID.NS",
+            "NTPC.NS",
+            "TECHM.NS",
+            "TATAMOTORS.NS",
+            "BAJFINANCE.NS",
+            "HCLTECH.NS",
+            "ADANIENT.NS",
+            "ADANIPORTS.NS",
+            "COALINDIA.NS",
+            "GRASIM.NS",
+            "JSWSTEEL.NS",
+            "ONGC.NS",
+            "BPCL.NS",
+            "CIPLA.NS",
+            "DRREDDY.NS",
+            "EICHERMOT.NS",
+            "HEROMOTOCO.NS",
+            "INDUSINDBK.NS",
+            "BAJAJFINSV.NS",
+            "TATACONSUM.NS",
+            "DIVISLAB.NS",
+            "APOLLOHOSP.NS",
+            "BRITANNIA.NS",
+            "SHRIRAMFIN.NS",
+            "SBILIFE.NS",
+            "HDFCLIFE.NS",
+            "M&M.NS",
+            "TATASTEEL.NS",
+            "HINDALCO.NS",
         ]
         # Add Nifty 50 index
         return ["^NSEI"] + nifty50
@@ -264,6 +310,7 @@ class YFinanceLoader(DataLoader):
 # ---------------------------------------------------------------------------
 # Parquet Collector for Nifty 50 1-minute data
 # ---------------------------------------------------------------------------
+
 
 class ParquetCollector:
     """Collects 1-minute bars for Nifty 50 and writes partitioned parquet files.
@@ -545,6 +592,7 @@ class ParquetCollector:
 # ---------------------------------------------------------------------------
 # Convenience function for quick data loading
 # ---------------------------------------------------------------------------
+
 
 def load_bars(
     symbol: str,

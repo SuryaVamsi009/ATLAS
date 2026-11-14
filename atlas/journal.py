@@ -44,6 +44,7 @@ IST = ZoneInfo("Asia/Kolkata")
 
 class VetoReason(Enum):
     """Enum representing the possible veto reasons from risk checks."""
+
     SIZE_OK = "size_ok"
     LOSS_OK = "loss_ok"
     HOURS_OK = "hours_ok"
@@ -67,6 +68,7 @@ class RiskVerdict:
         veto_reason: The first failing check name, or None if all pass.
         checks: Dict of 5 boolean checks: size_ok, loss_ok, hours_ok, symbol_ok, confidence_ok.
     """
+
     approved: bool
     final_qty: float
     final_stop: float
@@ -114,6 +116,7 @@ def write_cycle_entry(entry: dict[str, Any]) -> str:
 
 # --- Research AI write: what Research AI produces ---
 
+
 def write_regime_entry(
     snapshot_id: str,
     regime_flags: list[str],
@@ -159,6 +162,7 @@ def write_regime_entry(
 
 # --- Agent AI read: what Agent AI consumes ---
 
+
 def read_latest_regime_entry() -> dict[str, Any] | None:
     """Read the latest Research AI entry from the ledger.
 
@@ -199,6 +203,7 @@ def read_all_regime_entries() -> list[dict[str, Any]]:
 
 
 # --- Agent AI write: DecisionProposal hand-off ---
+
 
 def write_decision_proposal_entry(
     snapshot_id: str,
@@ -246,6 +251,7 @@ def write_decision_proposal_entry(
 
 # --- RiskVerdict write: verdict hand-off ---
 
+
 def write_risk_verdict_entry(
     proposal_entry_id: str,
     risk_verdict: RiskVerdict,
@@ -283,6 +289,7 @@ def write_risk_verdict_entry(
 
 
 # --- KiteAdapter write: order result hand-off ---
+
 
 def write_order_result_entry(
     proposal_entry_id: str,
@@ -348,6 +355,7 @@ def _rewrite_ledger(entries: list[dict[str, Any]]) -> None:
 
 
 # --- Ledger query: read for evaluation and review ---
+
 
 def get_ledger_entries(
     filter_regime: list[str] | None = None,
@@ -456,7 +464,9 @@ def get_ledger_stats() -> dict[str, Any]:
         "total_entries": total,
         "regime_distribution": regime_dist,
         "most_common_regime": most_common_regime,
-        "confidence_range": f"{min(confidences):.2f}-{max(confidences):.2f}" if confidences else "0.0-1.0",
+        "confidence_range": f"{min(confidences):.2f}-{max(confidences):.2f}"
+        if confidences
+        else "0.0-1.0",
         "total_pnl": pnl_total,
         "completed_trades": completed,
         "avg_pnl": pnl_total / completed if completed > 0 else 0.0,

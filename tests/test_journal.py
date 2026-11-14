@@ -32,10 +32,7 @@ def temp_ledger():
 def read_entries(ledger_file):
     if not ledger_file.exists():
         return []
-    return [
-        json.loads(line)
-        for line in ledger_file.read_text(encoding="utf-8").splitlines()
-    ]
+    return [json.loads(line) for line in ledger_file.read_text(encoding="utf-8").splitlines()]
 
 
 class TestJournal:
@@ -70,9 +67,14 @@ class TestJournal:
         assert entries[0]["entry_id"] == entry_id
         assert entries[0]["regime_flags"] == ["trending_up", "neutral"]
         assert entries[0]["event_alerts"] == ["breakout"]
-        assert entries[0]["thesis"] == "Nifty above 50-DMA with FII buying, trending market conditions"
+        assert (
+            entries[0]["thesis"] == "Nifty above 50-DMA with FII buying, trending market conditions"
+        )
         assert entries[0]["confidence"] == 0.78
-        assert entries[0]["news_context"] == "Q2 earnings season starting; IT sector AI revenue beats; FII buying observed"
+        assert (
+            entries[0]["news_context"]
+            == "Q2 earnings season starting; IT sector AI revenue beats; FII buying observed"
+        )
         assert entries[0]["agent_action"] is None
         assert entries[0]["risk_verdict"] is None
         assert entries[0]["order_result"] is None
@@ -166,7 +168,13 @@ class TestJournal:
             final_qty=50,
             final_stop=19300.0,
             veto_reason=VetoReason.NONE,
-            checks={"size_ok": True, "loss_ok": True, "hours_ok": True, "symbol_ok": True, "confidence_ok": True},
+            checks={
+                "size_ok": True,
+                "loss_ok": True,
+                "hours_ok": True,
+                "symbol_ok": True,
+                "confidence_ok": True,
+            },
         )
         entry_id = journal.write_risk_verdict_entry("proposal_regime_test_123", verdict)
         assert entry_id == "proposal_regime_test_123"
@@ -200,7 +208,13 @@ class TestJournal:
             final_qty=0,
             final_stop=0.0,
             veto_reason=VetoReason.SIZE_OK,
-            checks={"size_ok": False, "loss_ok": True, "hours_ok": True, "symbol_ok": True, "confidence_ok": True},
+            checks={
+                "size_ok": False,
+                "loss_ok": True,
+                "hours_ok": True,
+                "symbol_ok": True,
+                "confidence_ok": True,
+            },
         )
         journal.write_risk_verdict_entry("proposal_regime_test_123", verdict)
 

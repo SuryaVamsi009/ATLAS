@@ -24,8 +24,10 @@ from atlas.quant.features import (
 # Signal and Direction Types
 # ---------------------------------------------------------------------------
 
+
 class Direction(Enum):
     """Trade direction."""
+
     LONG = "LONG"
     SHORT = "SHORT"
     FLAT = "FLAT"
@@ -33,6 +35,7 @@ class Direction(Enum):
 
 class Horizon(Enum):
     """Trade horizon."""
+
     INTRADAY = "intraday"
     SWING = "swing"
 
@@ -51,6 +54,7 @@ class Signal:
         target_price: Suggested target price (optional)
         metadata: Additional strategy-specific data
     """
+
     symbol: str
     direction: Direction
     conviction: float
@@ -84,6 +88,7 @@ class Signal:
 # ---------------------------------------------------------------------------
 # Base Strategy Class
 # ---------------------------------------------------------------------------
+
 
 class Strategy(ABC):
     """Abstract base class for all strategies.
@@ -160,6 +165,7 @@ class Strategy(ABC):
 # Opening Range Breakout (ORB) Strategy
 # ---------------------------------------------------------------------------
 
+
 class ORBStrategy(Strategy):
     """Opening Range Breakout strategy.
 
@@ -195,9 +201,7 @@ class ORBStrategy(Strategy):
             return None
 
         # Calculate opening range
-        or_high, or_low, start_idx, end_idx = opening_range(
-            bars, self.range_minutes, "09:15"
-        )
+        or_high, or_low, start_idx, end_idx = opening_range(bars, self.range_minutes, "09:15")
 
         if np.isnan(or_high) or np.isnan(or_low):
             return None
@@ -214,7 +218,11 @@ class ORBStrategy(Strategy):
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
 
         # Long breakout: price breaks above OR high with volume
-        if current_position <= 0 and current_high > or_high and volume_ratio >= self.min_volume_ratio:
+        if (
+            current_position <= 0
+            and current_high > or_high
+            and volume_ratio >= self.min_volume_ratio
+        ):
             entry_price = current_close
             stop_distance = entry_price - or_low
             target_price = entry_price + (stop_distance * self.risk_reward)
@@ -239,7 +247,7 @@ class ORBStrategy(Strategy):
                         "or_low": or_low,
                         "volume_ratio": volume_ratio,
                         "breakout_strength": breakout_strength,
-                    }
+                    },
                 )
 
         # Short breakdown: price breaks below OR low with volume
@@ -267,7 +275,7 @@ class ORBStrategy(Strategy):
                         "or_low": or_low,
                         "volume_ratio": volume_ratio,
                         "breakdown_strength": breakdown_strength,
-                    }
+                    },
                 )
 
         return None
@@ -283,6 +291,7 @@ class ORBStrategy(Strategy):
             last_bar = bars[-1]
             ts_ms = last_bar[0]
             import pandas as pd
+
             dt = pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert("Asia/Kolkata")
             if dt.hour >= 15 and dt.minute >= 15:
                 return True
@@ -293,6 +302,7 @@ class ORBStrategy(Strategy):
 # ---------------------------------------------------------------------------
 # VWAP Reversion Strategy
 # ---------------------------------------------------------------------------
+
 
 class VWAPReversionStrategy(Strategy):
     """VWAP Mean Reversion strategy.
@@ -349,7 +359,11 @@ class VWAPReversionStrategy(Strategy):
         dist_from_vwap = (current_close - current_vwap) / current_atr
 
         # Long: price significantly below VWAP and RSI oversold
-        if current_position <= 0 and dist_from_vwap < -self.atr_multiplier and current_rsi < self.rsi_oversold:
+        if (
+            current_position <= 0
+            and dist_from_vwap < -self.atr_multiplier
+            and current_rsi < self.rsi_oversold
+        ):
             entry_price = current_close
             stop_distance = self.atr_multiplier * current_atr
             target_price = current_vwap  # Target VWAP
@@ -374,11 +388,15 @@ class VWAPReversionStrategy(Strategy):
                         "atr": current_atr,
                         "rsi": current_rsi,
                         "dist_from_vwap_atr": dist_from_vwap,
-                    }
+                    },
                 )
 
         # Short: price significantly above VWAP and RSI overbought
-        if current_position >= 0 and dist_from_vwap > self.atr_multiplier and current_rsi > self.rsi_overbought:
+        if (
+            current_position >= 0
+            and dist_from_vwap > self.atr_multiplier
+            and current_rsi > self.rsi_overbought
+        ):
             entry_price = current_close
             stop_distance = self.atr_multiplier * current_atr
             target_price = current_vwap  # Target VWAP
@@ -402,7 +420,7 @@ class VWAPReversionStrategy(Strategy):
                         "atr": current_atr,
                         "rsi": current_rsi,
                         "dist_from_vwap_atr": dist_from_vwap,
-                    }
+                    },
                 )
 
         return None
@@ -434,6 +452,7 @@ class VWAPReversionStrategy(Strategy):
             last_bar = bars[-1]
             ts_ms = last_bar[0]
             import pandas as pd
+
             dt = pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert("Asia/Kolkata")
             if dt.hour >= 15 and dt.minute >= 15:
                 return True
@@ -444,6 +463,7 @@ class VWAPReversionStrategy(Strategy):
 # ---------------------------------------------------------------------------
 # Gap Fade Strategy
 # ---------------------------------------------------------------------------
+
 
 class GapFadeStrategy(Strategy):
     """Gap Fade strategy.
@@ -510,7 +530,9 @@ class GapFadeStrategy(Strategy):
 
                     # Conviction based on gap size and rejection strength
                     gap_score = min(gap_pct / 3.0, 1.0)
-                    rejection_strength = (bar_open - bar_close) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    rejection_strength = (
+                        (bar_open - bar_close) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    )
                     conviction = min(0.4 + 0.3 * gap_score + 0.3 * rejection_strength, 0.85)
 
                     if conviction >= self.min_conviction and stop_distance > 0:
@@ -528,7 +550,7 @@ class GapFadeStrategy(Strategy):
                                 "gap_type": "gap_up",
                                 "prev_close": prev_day_close,
                                 "rejection_bar": i,
-                            }
+                            },
                         )
 
             # Gap down fade: price gaps down but shows buying pressure
@@ -540,7 +562,9 @@ class GapFadeStrategy(Strategy):
                     target_price = prev_day_close  # Gap fill target
 
                     gap_score = min(abs(gap_pct) / 3.0, 1.0)
-                    rejection_strength = (bar_close - bar_open) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    rejection_strength = (
+                        (bar_close - bar_open) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    )
                     conviction = min(0.4 + 0.3 * gap_score + 0.3 * rejection_strength, 0.85)
 
                     if conviction >= self.min_conviction and stop_distance > 0:
@@ -558,7 +582,7 @@ class GapFadeStrategy(Strategy):
                                 "gap_type": "gap_down",
                                 "prev_close": prev_day_close,
                                 "rejection_bar": i,
-                            }
+                            },
                         )
 
         return None
@@ -579,6 +603,7 @@ class GapFadeStrategy(Strategy):
             last_bar = bars[-1]
             ts_ms = last_bar[0]
             import pandas as pd
+
             dt = pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert("Asia/Kolkata")
             if dt.hour >= 15 and dt.minute >= 15:
                 return True
