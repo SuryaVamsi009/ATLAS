@@ -96,7 +96,6 @@ Save as `quant-reports/YYYY-MM-DD-quant-report.md` with:
 
 ### Quant Data Sources (in priority order)
 1. `atlas/quant/data.py` — ParquetCollector output (partitioned parquet for Nifty 50)
-2. `atlas/quant/backtest.py` — BacktestEngine results
-3. `atlas/quant/validation.py` — ValidationEngine results (deflated Sharpe, trial log)
-4. `quant/trials.jsonl` — Trial log for audit trail
+2. `atlas/quant/validation.py` — ValidationEngine results (deflated Sharpe, trial log)
+3. `quant/trials.jsonl` — Trial log for audit trail
 4. `docs/hypotheses.md` — Strategy hypotheses

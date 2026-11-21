@@ -8,24 +8,26 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
 from atlas.quant.features import (
-    rsi, ema, atr, vwap, opening_range, gap,
-    macd, bollinger_bands, stochastic,
+    atr,
+    opening_range,
+    rsi,
+    vwap,
 )
-
 
 # ---------------------------------------------------------------------------
 # Signal and Direction Types
 # ---------------------------------------------------------------------------
 
+
 class Direction(Enum):
     """Trade direction."""
+
     LONG = "LONG"
     SHORT = "SHORT"
     FLAT = "FLAT"
@@ -33,6 +35,7 @@ class Direction(Enum):
 
 class Horizon(Enum):
     """Trade horizon."""
+
     INTRADAY = "intraday"
     SWING = "swing"
 
@@ -51,14 +54,15 @@ class Signal:
         target_price: Suggested target price (optional)
         metadata: Additional strategy-specific data
     """
+
     symbol: str
     direction: Direction
     conviction: float
     horizon: Horizon
     stop_distance: float
-    entry_price: Optional[float] = None
-    target_price: Optional[float] = None
-    metadata: Optional[Dict[str, Any]] = None
+    entry_price: float | None = None
+    target_price: float | None = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         """Validate signal parameters."""
@@ -67,7 +71,7 @@ class Signal:
         if self.stop_distance <= 0:
             raise ValueError(f"Stop distance must be positive, got {self.stop_distance}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "symbol": self.symbol,
@@ -84,6 +88,7 @@ class Signal:
 # ---------------------------------------------------------------------------
 # Base Strategy Class
 # ---------------------------------------------------------------------------
+
 
 class Strategy(ABC):
     """Abstract base class for all strategies.
@@ -108,15 +113,15 @@ class Strategy(ABC):
         self.name = name
         self.min_conviction = min_conviction
         self.max_positions = max_positions
-        self.active_signals: Dict[str, Signal] = {}
+        self.active_signals: dict[str, Signal] = {}
 
     @abstractmethod
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-    ) -> Optional[Signal]:
+    ) -> Signal | None:
         """Generate a trading signal for the given symbol and bars.
 
         Args:
@@ -132,7 +137,7 @@ class Strategy(ABC):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         """Determine if current position should be exited.
@@ -159,6 +164,7 @@ class Strategy(ABC):
 # ---------------------------------------------------------------------------
 # Opening Range Breakout (ORB) Strategy
 # ---------------------------------------------------------------------------
+
 
 class ORBStrategy(Strategy):
     """Opening Range Breakout strategy.
@@ -188,16 +194,14 @@ class ORBStrategy(Strategy):
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-    ) -> Optional[Signal]:
+    ) -> Signal | None:
         if len(bars) < self.range_minutes + 5:
             return None
 
         # Calculate opening range
-        or_high, or_low, start_idx, end_idx = opening_range(
-            bars, self.range_minutes, "09:15"
-        )
+        or_high, or_low, start_idx, end_idx = opening_range(bars, self.range_minutes, "09:15")
 
         if np.isnan(or_high) or np.isnan(or_low):
             return None
@@ -214,7 +218,11 @@ class ORBStrategy(Strategy):
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
 
         # Long breakout: price breaks above OR high with volume
-        if current_position <= 0 and current_high > or_high and volume_ratio >= self.min_volume_ratio:
+        if (
+            current_position <= 0
+            and current_high > or_high
+            and volume_ratio >= self.min_volume_ratio
+        ):
             entry_price = current_close
             stop_distance = entry_price - or_low
             target_price = entry_price + (stop_distance * self.risk_reward)
@@ -222,7 +230,7 @@ class ORBStrategy(Strategy):
             # Conviction based on volume and breakout strength
             breakout_strength = (current_high - or_high) / or_high
             volume_score = min(volume_ratio / 2.0, 1.0)
-            conviction = min(0.5 + 0.3 * breakout_strength * 100 + 0.2 * volume_score, 0.95)
+            conviction = float(min(0.5 + 0.3 * breakout_strength * 100 + 0.2 * volume_score, 0.95))
 
             if conviction >= self.min_conviction:
                 return Signal(
@@ -239,7 +247,7 @@ class ORBStrategy(Strategy):
                         "or_low": or_low,
                         "volume_ratio": volume_ratio,
                         "breakout_strength": breakout_strength,
-                    }
+                    },
                 )
 
         # Short breakdown: price breaks below OR low with volume
@@ -250,7 +258,7 @@ class ORBStrategy(Strategy):
 
             breakdown_strength = (or_low - current_low) / or_low
             volume_score = min(volume_ratio / 2.0, 1.0)
-            conviction = min(0.5 + 0.3 * breakdown_strength * 100 + 0.2 * volume_score, 0.95)
+            conviction = float(min(0.5 + 0.3 * breakdown_strength * 100 + 0.2 * volume_score, 0.95))
 
             if conviction >= self.min_conviction:
                 return Signal(
@@ -267,7 +275,7 @@ class ORBStrategy(Strategy):
                         "or_low": or_low,
                         "volume_ratio": volume_ratio,
                         "breakdown_strength": breakdown_strength,
-                    }
+                    },
                 )
 
         return None
@@ -275,7 +283,7 @@ class ORBStrategy(Strategy):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         # Force flat before market close (15:15 IST)
@@ -283,6 +291,7 @@ class ORBStrategy(Strategy):
             last_bar = bars[-1]
             ts_ms = last_bar[0]
             import pandas as pd
+
             dt = pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert("Asia/Kolkata")
             if dt.hour >= 15 and dt.minute >= 15:
                 return True
@@ -293,6 +302,7 @@ class ORBStrategy(Strategy):
 # ---------------------------------------------------------------------------
 # VWAP Reversion Strategy
 # ---------------------------------------------------------------------------
+
 
 class VWAPReversionStrategy(Strategy):
     """VWAP Mean Reversion strategy.
@@ -326,9 +336,9 @@ class VWAPReversionStrategy(Strategy):
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-    ) -> Optional[Signal]:
+    ) -> Signal | None:
         if len(bars) < max(self.atr_period, self.rsi_period) + 10:
             return None
 
@@ -349,7 +359,11 @@ class VWAPReversionStrategy(Strategy):
         dist_from_vwap = (current_close - current_vwap) / current_atr
 
         # Long: price significantly below VWAP and RSI oversold
-        if current_position <= 0 and dist_from_vwap < -self.atr_multiplier and current_rsi < self.rsi_oversold:
+        if (
+            current_position <= 0
+            and dist_from_vwap < -self.atr_multiplier
+            and current_rsi < self.rsi_oversold
+        ):
             entry_price = current_close
             stop_distance = self.atr_multiplier * current_atr
             target_price = current_vwap  # Target VWAP
@@ -374,11 +388,15 @@ class VWAPReversionStrategy(Strategy):
                         "atr": current_atr,
                         "rsi": current_rsi,
                         "dist_from_vwap_atr": dist_from_vwap,
-                    }
+                    },
                 )
 
         # Short: price significantly above VWAP and RSI overbought
-        if current_position >= 0 and dist_from_vwap > self.atr_multiplier and current_rsi > self.rsi_overbought:
+        if (
+            current_position >= 0
+            and dist_from_vwap > self.atr_multiplier
+            and current_rsi > self.rsi_overbought
+        ):
             entry_price = current_close
             stop_distance = self.atr_multiplier * current_atr
             target_price = current_vwap  # Target VWAP
@@ -402,7 +420,7 @@ class VWAPReversionStrategy(Strategy):
                         "atr": current_atr,
                         "rsi": current_rsi,
                         "dist_from_vwap_atr": dist_from_vwap,
-                    }
+                    },
                 )
 
         return None
@@ -410,7 +428,7 @@ class VWAPReversionStrategy(Strategy):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         # Exit when price reaches VWAP (mean reversion target)
@@ -434,6 +452,7 @@ class VWAPReversionStrategy(Strategy):
             last_bar = bars[-1]
             ts_ms = last_bar[0]
             import pandas as pd
+
             dt = pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert("Asia/Kolkata")
             if dt.hour >= 15 and dt.minute >= 15:
                 return True
@@ -444,6 +463,7 @@ class VWAPReversionStrategy(Strategy):
 # ---------------------------------------------------------------------------
 # Gap Fade Strategy
 # ---------------------------------------------------------------------------
+
 
 class GapFadeStrategy(Strategy):
     """Gap Fade strategy.
@@ -471,10 +491,10 @@ class GapFadeStrategy(Strategy):
     def generate_signal(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int = 0,
-        prev_day_close: Optional[float] = None,
-    ) -> Optional[Signal]:
+        prev_day_close: float | None = None,
+    ) -> Signal | None:
         if len(bars) < self.lookback_bars:
             return None
 
@@ -492,7 +512,6 @@ class GapFadeStrategy(Strategy):
         # Check for reversal in first N bars
         first_bar_high = bars[0][2]
         first_bar_low = bars[0][3]
-        first_bar_close = bars[0][4]
 
         # Look for rejection/reversal in early bars
         for i in range(1, min(self.lookback_bars, len(bars))):
@@ -511,7 +530,9 @@ class GapFadeStrategy(Strategy):
 
                     # Conviction based on gap size and rejection strength
                     gap_score = min(gap_pct / 3.0, 1.0)
-                    rejection_strength = (bar_open - bar_close) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    rejection_strength = (
+                        (bar_open - bar_close) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    )
                     conviction = min(0.4 + 0.3 * gap_score + 0.3 * rejection_strength, 0.85)
 
                     if conviction >= self.min_conviction and stop_distance > 0:
@@ -529,7 +550,7 @@ class GapFadeStrategy(Strategy):
                                 "gap_type": "gap_up",
                                 "prev_close": prev_day_close,
                                 "rejection_bar": i,
-                            }
+                            },
                         )
 
             # Gap down fade: price gaps down but shows buying pressure
@@ -541,7 +562,9 @@ class GapFadeStrategy(Strategy):
                     target_price = prev_day_close  # Gap fill target
 
                     gap_score = min(abs(gap_pct) / 3.0, 1.0)
-                    rejection_strength = (bar_close - bar_open) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    rejection_strength = (
+                        (bar_close - bar_open) / (bar_high - bar_low) if bar_high != bar_low else 0
+                    )
                     conviction = min(0.4 + 0.3 * gap_score + 0.3 * rejection_strength, 0.85)
 
                     if conviction >= self.min_conviction and stop_distance > 0:
@@ -559,7 +582,7 @@ class GapFadeStrategy(Strategy):
                                 "gap_type": "gap_down",
                                 "prev_close": prev_day_close,
                                 "rejection_bar": i,
-                            }
+                            },
                         )
 
         return None
@@ -567,7 +590,7 @@ class GapFadeStrategy(Strategy):
     def should_exit(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         current_position: int,
     ) -> bool:
         # Exit on gap fill (price reaches previous close)
@@ -580,6 +603,7 @@ class GapFadeStrategy(Strategy):
             last_bar = bars[-1]
             ts_ms = last_bar[0]
             import pandas as pd
+
             dt = pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert("Asia/Kolkata")
             if dt.hour >= 15 and dt.minute >= 15:
                 return True
@@ -591,7 +615,7 @@ class GapFadeStrategy(Strategy):
 # Strategy Registry
 # ---------------------------------------------------------------------------
 
-STRATEGY_REGISTRY = {
+STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "orb": ORBStrategy,
     "vwap_reversion": VWAPReversionStrategy,
     "gap_fade": GapFadeStrategy,
@@ -614,10 +638,9 @@ def get_strategy(name: str, **kwargs) -> Strategy:
     return STRATEGY_REGISTRY[name](**kwargs)
 
 
-def list_strategies() -> List[str]:
+def list_strategies() -> list[str]:
     """List available strategy names."""
     return list(STRATEGY_REGISTRY.keys())
 
 
 # Type hint for bars
-from typing import List

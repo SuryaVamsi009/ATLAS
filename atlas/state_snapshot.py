@@ -8,7 +8,6 @@ never supplies them.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -57,7 +56,7 @@ def _wilder_rsi(closes: list[float], period: int = 14) -> float:
     if len(closes) < period + 1:
         return 50.0  # neutral when insufficient data
 
-    window = closes[-(period + 1):]
+    window = closes[-(period + 1) :]
     gains = []
     losses = []
     for i in range(1, len(window)):
@@ -121,7 +120,7 @@ def compute_from_bars(symbol: str, timeframe: str, bars: list[list[float]]) -> S
         returns = [(closes[i] / closes[i - 1]) - 1 for i in range(1, len(closes))]
         mean_return = sum(returns) / len(returns)
         variance = sum((r - mean_return) ** 2 for r in returns) / (len(returns) - 1)
-        realised_vol = variance ** 0.5
+        realised_vol = variance**0.5
     else:
         realised_vol = 0.0
 

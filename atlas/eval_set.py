@@ -14,8 +14,10 @@ from typing import Any
 # Grading logic – mechanically determine outcome from price bars
 # ---------------------------------------------------------------------------
 
+
 class Outcome(Enum):
     """Ground-truth outcome of a trade proposal."""
+
     TARGET_HIT = "TARGET_HIT"
     STOP_HIT = "STOP_HIT"
     EXPIRED = "EXPIRED"
@@ -107,6 +109,7 @@ EvalEntry = dict[str, Any]
 # ---------------------------------------------------------------------------
 # compute_metrics
 # ---------------------------------------------------------------------------
+
 
 def compute_metrics(eval_results: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute evaluation metrics from a list of eval entry results.
@@ -230,7 +233,11 @@ def compute_metrics(eval_results: list[dict[str, Any]]) -> dict[str, Any]:
     for bin_key in sorted(bins.keys()):
         bin_data = bins[bin_key]
         success_rate = bin_data["hits"] / bin_data["total"] if bin_data["total"] > 0 else 0.0
-        avg_r_in_bin = sum(bin_data["r_multiples"]) / len(bin_data["r_multiples"]) if bin_data["r_multiples"] else 0.0
+        avg_r_in_bin = (
+            sum(bin_data["r_multiples"]) / len(bin_data["r_multiples"])
+            if bin_data["r_multiples"]
+            else 0.0
+        )
         calibration.append(
             {
                 "confidence_range": f"{bin_key[0] * 0.1:.1f}-{(bin_key[0] + 1) * 0.1:.1f}",

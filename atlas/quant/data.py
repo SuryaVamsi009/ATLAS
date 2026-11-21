@@ -8,13 +8,11 @@ parquet for Nifty 50 with gap/duplicate/timezone checks.
 from __future__ import annotations
 
 import abc
-import os
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import numpy as np
 import pandas as pd
 import yfinance as yf
 
@@ -25,6 +23,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="yfinance")
 # ---------------------------------------------------------------------------
 # Data Loader Interface
 # ---------------------------------------------------------------------------
+
 
 class DataLoader(abc.ABC):
     """Abstract base class for data loaders.
@@ -40,7 +39,7 @@ class DataLoader(abc.ABC):
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Load historical OHLCV bars.
 
         Args:
@@ -55,7 +54,7 @@ class DataLoader(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_available_symbols(self) -> List[str]:
+    def get_available_symbols(self) -> list[str]:
         """Get list of available symbols from this data source."""
         raise NotImplementedError
 
@@ -63,6 +62,7 @@ class DataLoader(abc.ABC):
 # ---------------------------------------------------------------------------
 # YFinance Loader Implementation
 # ---------------------------------------------------------------------------
+
 
 class YFinanceLoader(DataLoader):
     """YFinance data loader for intraday and daily data.
@@ -99,7 +99,7 @@ class YFinanceLoader(DataLoader):
         "1mo": 7300,
     }
 
-    def __init__(self, cache_dir: Optional[str] = None):
+    def __init__(self, cache_dir: str | None = None):
         """Initialize the YFinance loader.
 
         Args:
@@ -115,7 +115,7 @@ class YFinanceLoader(DataLoader):
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Load historical OHLCV bars from yfinance.
 
         Args:
@@ -135,7 +135,9 @@ class YFinanceLoader(DataLoader):
 
         # Validate timeframe
         if timeframe not in self.TIMEFRAME_MAP:
-            raise ValueError(f"Unsupported timeframe: {timeframe}. Supported: {list(self.TIMEFRAME_MAP.keys())}")
+            raise ValueError(
+                f"Unsupported timeframe: {timeframe}. Supported: {list(self.TIMEFRAME_MAP.keys())}"
+            )
 
         yf_interval = self.TIMEFRAME_MAP[timeframe]
 
@@ -169,16 +171,20 @@ class YFinanceLoader(DataLoader):
                     ts_ms = int(idx.timestamp() * 1000)
                 else:
                     # Assume UTC if naive
-                    ts_ms = int(idx.replace(tzinfo=datetime.utcnow().astimezone().tzinfo).timestamp() * 1000)
+                    ts_ms = int(
+                        idx.replace(tzinfo=datetime.utcnow().astimezone().tzinfo).timestamp() * 1000
+                    )
 
-                bars.append([
-                    ts_ms,
-                    float(row["Open"]),
-                    float(row["High"]),
-                    float(row["Low"]),
-                    float(row["Close"]),
-                    float(row["Volume"]),
-                ])
+                bars.append(
+                    [
+                        ts_ms,
+                        float(row["Open"]),
+                        float(row["High"]),
+                        float(row["Low"]),
+                        float(row["Close"]),
+                        float(row["Volume"]),
+                    ]
+                )
 
             # Cache if enabled
             if self.cache_dir and bars:
@@ -190,20 +196,58 @@ class YFinanceLoader(DataLoader):
             print(f"Error fetching data for {symbol} {timeframe}: {e}")
             return []
 
-    def get_available_symbols(self) -> List[str]:
+    def get_available_symbols(self) -> list[str]:
         """Get list of available symbols (Nifty 50 components + index)."""
         # Nifty 50 symbols with .NS suffix for yfinance
         nifty50 = [
-            "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS",
-            "HINDUNILVR.NS", "ITC.NS", "SBIN.NS", "BHARTIARTL.NS", "KOTAKBANK.NS",
-            "LT.NS", "AXISBANK.NS", "ASIANPAINT.NS", "MARUTI.NS", "SUNPHARMA.NS",
-            "TITAN.NS", "ULTRACEMCO.NS", "WIPRO.NS", "NESTLEIND.NS", "POWERGRID.NS",
-            "NTPC.NS", "TECHM.NS", "TATAMOTORS.NS", "BAJFINANCE.NS", "HCLTECH.NS",
-            "ADANIENT.NS", "ADANIPORTS.NS", "COALINDIA.NS", "GRASIM.NS", "JSWSTEEL.NS",
-            "ONGC.NS", "BPCL.NS", "CIPLA.NS", "DRREDDY.NS", "EICHERMOT.NS",
-            "HEROMOTOCO.NS", "INDUSINDBK.NS", "BAJAJFINSV.NS", "TATACONSUM.NS",
-            "DIVISLAB.NS", "APOLLOHOSP.NS", "BRITANNIA.NS", "SHRIRAMFIN.NS",
-            "SBILIFE.NS", "HDFCLIFE.NS", "M&M.NS", "TATASTEEL.NS", "HINDALCO.NS",
+            "RELIANCE.NS",
+            "TCS.NS",
+            "HDFCBANK.NS",
+            "ICICIBANK.NS",
+            "INFY.NS",
+            "HINDUNILVR.NS",
+            "ITC.NS",
+            "SBIN.NS",
+            "BHARTIARTL.NS",
+            "KOTAKBANK.NS",
+            "LT.NS",
+            "AXISBANK.NS",
+            "ASIANPAINT.NS",
+            "MARUTI.NS",
+            "SUNPHARMA.NS",
+            "TITAN.NS",
+            "ULTRACEMCO.NS",
+            "WIPRO.NS",
+            "NESTLEIND.NS",
+            "POWERGRID.NS",
+            "NTPC.NS",
+            "TECHM.NS",
+            "TATAMOTORS.NS",
+            "BAJFINANCE.NS",
+            "HCLTECH.NS",
+            "ADANIENT.NS",
+            "ADANIPORTS.NS",
+            "COALINDIA.NS",
+            "GRASIM.NS",
+            "JSWSTEEL.NS",
+            "ONGC.NS",
+            "BPCL.NS",
+            "CIPLA.NS",
+            "DRREDDY.NS",
+            "EICHERMOT.NS",
+            "HEROMOTOCO.NS",
+            "INDUSINDBK.NS",
+            "BAJAJFINSV.NS",
+            "TATACONSUM.NS",
+            "DIVISLAB.NS",
+            "APOLLOHOSP.NS",
+            "BRITANNIA.NS",
+            "SHRIRAMFIN.NS",
+            "SBILIFE.NS",
+            "HDFCLIFE.NS",
+            "M&M.NS",
+            "TATASTEEL.NS",
+            "HINDALCO.NS",
         ]
         # Add Nifty 50 index
         return ["^NSEI"] + nifty50
@@ -211,6 +255,7 @@ class YFinanceLoader(DataLoader):
     def _get_cache_path(self, symbol: str, timeframe: str) -> Path:
         """Get cache file path for symbol/timeframe."""
         safe_symbol = symbol.replace(".", "_").replace("^", "").replace("/", "_")
+        assert self.cache_dir is not None
         return self.cache_dir / f"{safe_symbol}_{timeframe}.parquet"
 
     def _load_from_cache(
@@ -219,7 +264,7 @@ class YFinanceLoader(DataLoader):
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> Optional[List[List[float]]]:
+    ) -> list[list[float]] | None:
         """Load bars from cache if available and covers the requested range."""
         if not self.cache_dir:
             return None
@@ -243,12 +288,12 @@ class YFinanceLoader(DataLoader):
             if filtered.empty:
                 return None
 
-            return filtered[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()
+            return filtered[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()  # type: ignore
 
         except Exception:
             return None
 
-    def _save_to_cache(self, symbol: str, timeframe: str, bars: List[List[float]]) -> None:
+    def _save_to_cache(self, symbol: str, timeframe: str, bars: list[list[float]]) -> None:
         """Save bars to cache as parquet."""
         if not self.cache_dir or not bars:
             return
@@ -266,6 +311,7 @@ class YFinanceLoader(DataLoader):
 # Parquet Collector for Nifty 50 1-minute data
 # ---------------------------------------------------------------------------
 
+
 class ParquetCollector:
     """Collects 1-minute bars for Nifty 50 and writes partitioned parquet files.
 
@@ -280,7 +326,7 @@ class ParquetCollector:
     def __init__(
         self,
         output_dir: str,
-        symbols: Optional[List[str]] = None,
+        symbols: list[str] | None = None,
         timeframe: str = "1m",
     ):
         """Initialize the collector.
@@ -310,7 +356,7 @@ class ParquetCollector:
         start: datetime,
         end: datetime,
         incremental: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Collect 1-minute bars for all symbols and write partitioned parquet.
 
         Args:
@@ -321,7 +367,17 @@ class ParquetCollector:
         Returns:
             Dict with collection statistics
         """
-        all_stats = {
+        from typing import TypedDict
+
+        class CollectStats(TypedDict):
+            symbols_processed: int
+            total_bars_written: int
+            gaps_detected: int
+            duplicates_removed: int
+            timezone_errors: int
+            errors: list[str]
+
+        all_stats: CollectStats = {
             "symbols_processed": 0,
             "total_bars_written": 0,
             "gaps_detected": 0,
@@ -354,13 +410,13 @@ class ParquetCollector:
             except Exception as e:
                 all_stats["errors"].append(f"{symbol}: {str(e)}")
 
-        return all_stats
+        return all_stats  # type: ignore[return-value]
 
     def _validate_and_clean_bars(
         self,
-        bars: List[List[float]],
+        bars: list[list[float]],
         symbol: str,
-    ) -> Tuple[List[List[float]], Dict[str, int]]:
+    ) -> tuple[list[list[float]], dict[str, int]]:
         """Validate bars for gaps, duplicates, and timezone issues.
 
         Args:
@@ -417,7 +473,7 @@ class ParquetCollector:
     def _write_partitioned_parquet(
         self,
         symbol: str,
-        bars: List[List[float]],
+        bars: list[list[float]],
         incremental: bool,
     ) -> int:
         """Write bars to partitioned parquet files by date.
@@ -477,7 +533,7 @@ class ParquetCollector:
         self,
         symbol: str,
         date: str,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Read bars for a specific symbol and date from partitioned parquet.
 
         Args:
@@ -495,7 +551,7 @@ class ParquetCollector:
 
         try:
             df = pd.read_parquet(partition_file)
-            return df[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()
+            return df[["timestamp", "open", "high", "low", "close", "volume"]].values.tolist()  # type: ignore
         except Exception:
             return []
 
@@ -504,7 +560,7 @@ class ParquetCollector:
         symbol: str,
         start: datetime,
         end: datetime,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Read bars for a symbol across a date range.
 
         Args:
@@ -537,13 +593,14 @@ class ParquetCollector:
 # Convenience function for quick data loading
 # ---------------------------------------------------------------------------
 
+
 def load_bars(
     symbol: str,
     timeframe: str,
     start: datetime,
     end: datetime,
-    cache_dir: Optional[str] = None,
-) -> List[List[float]]:
+    cache_dir: str | None = None,
+) -> list[list[float]]:
     """Convenience function to load bars using YFinanceLoader.
 
     Args:

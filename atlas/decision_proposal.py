@@ -8,7 +8,6 @@ position size hint, and stop hint.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -27,5 +26,5 @@ class DecisionProposal:
     action: str
     confidence: float
     size_hint: float
-    stop_hint: Optional[float]
-    rationale: Optional[str] = None
+    stop_hint: float | None
+    rationale: str | None = None

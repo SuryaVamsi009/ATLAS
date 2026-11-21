@@ -1,6 +1,5 @@
 """Tests for atlas.quant.data module."""
 
-
 import pytest
 
 from atlas.quant.data import DataLoader, ParquetCollector, YFinanceLoader, load_bars
